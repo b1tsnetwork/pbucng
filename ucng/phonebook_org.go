@@ -177,7 +177,9 @@ func (h *Hub) SyncPBOrg(version string, units []pbUnit) (PBOrgResult, error) {
 	groups := map[string]pbGroup{}
 	for i := range units {
 		u := &units[i]
-		name, ok := CleanName(u.Name)
+		name, ok := cleanText(
+			strings.Join(strings.Fields(u.Name), " "), 120,
+		)
 		if !ok || u.ID <= 0 || seen[u.ID] {
 			return res, ErrPBOrg
 		}
