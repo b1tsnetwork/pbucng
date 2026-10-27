@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: phonebook/go.mod
           cache-dependency-path: phonebook/go.sum
@@ -91,7 +91,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: ucng/go.mod
           cache-dependency-path: ucng/go.sum
@@ -145,7 +145,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: ucng/go.mod
           cache-dependency-path: ucng/go.sum
@@ -208,7 +208,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Build (amd64)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./ucng
           file: ./ucng/Dockerfile.music
