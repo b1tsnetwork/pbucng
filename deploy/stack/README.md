@@ -45,7 +45,7 @@ Entscheidungen und Begründungen: [`docs/RELEASE-ENTSCHEIDUNGEN.md`](../../phone
 - Zwei DNS-Namen auf den Server, z. B. `telefonbuch.firma.local` und `kommunikation.firma.local`. Es müssen zwei Namen sein, kein Pfad (ADR-004).
 - Zertifikate für beide Namen (Firmen-CA) oder `TLS_MODE=acme` bei öffentlich auflösbaren Namen.
 - LDAPS-Zugang zum AD: Dienstkonto mit Lesezugriff und Stammzertifikat der Firma.
-- Zugriff auf die Images in `ghcr.io/b1tsnetwork/…` oder eine eigene Registry (`TB_IMAGE`, `UCNG_IMAGE`).
+- Zugriff auf die Images in `ghcr.io/b1tsnetwork/pbucng/…` oder eine eigene Registry (`TB_IMAGE`, `UCNG_IMAGE`).
 
 **Firewall**
 

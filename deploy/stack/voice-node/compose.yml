@@ -16,7 +16,7 @@ name: ucng-voice
 
 services:
   voice:
-    image: ${UCNG_VOICE_IMAGE:-ghcr.io/b1tsnetwork/ucng-voice}:${UCNG_VERSION:?UCNG_VERSION in .env setzen (gleich wie am Haupt-Server)}
+    image: ${UCNG_VOICE_IMAGE:-ghcr.io/b1tsnetwork/pbucng/ucng-voice}:${UCNG_VERSION:?UCNG_VERSION in .env setzen (gleich wie am Haupt-Server)}
     hostname: ${AGENT_ID:-voice1}
     restart: unless-stopped
     read_only: true

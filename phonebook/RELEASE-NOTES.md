@@ -42,9 +42,9 @@
 
 | Komponente | Image |
 |---|---|
-| Telefonbuch | `ghcr.io/b1tsnetwork/phonebook:1.0.0-rc.1` |
-| Kommunikation | `ghcr.io/b1tsnetwork/ucng:1.0.0-rc.1` |
-| Sprach-Server | `ghcr.io/b1tsnetwork/ucng-voice:1.0.0-rc.1` |
+| Telefonbuch | `ghcr.io/b1tsnetwork/pbucng/phonebook:1.0.0-rc.1` |
+| Kommunikation | `ghcr.io/b1tsnetwork/pbucng/ucng:1.0.0-rc.1` |
+| Sprach-Server | `ghcr.io/b1tsnetwork/pbucng/ucng-voice:1.0.0-rc.1` |
 | Datenbank | `mysql:8.4` |
 | Gateway | `caddy:2.10` |
 

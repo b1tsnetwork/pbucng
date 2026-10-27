@@ -228,7 +228,7 @@ Das Telefonbuch liegt zusammen mit der Kommunikation (UCNG, Ordner `ucng/`) in e
   - `govulncheck`;
   - JavaScript- und PowerShell-Syntax.
 - **`release.yml`** (Push auf `main`, Tags `v*`):
-  - Image `ghcr.io/<owner>/phonebook` für `linux/amd64` und `linux/arm64`: Distroless, Benutzer `nonroot`, `HEALTHCHECK` (`telefonbuch healthcheck`), mit SBOM und Herkunftsnachweis;
+  - Image `ghcr.io/<owner>/<repo>/phonebook` für `linux/amd64` und `linux/arm64`: Distroless, Benutzer `nonroot`, `HEALTHCHECK` (`telefonbuch healthcheck`), mit SBOM und Herkunftsnachweis;
   - Tags: `main`, `sha-…`, `latest` bzw. `1.2.3`, `1.2`, `1`; Vorabversionen (`v1.0.0-rc.1`) nur mit ihrer eigenen Version;
   - dazu Programmdateien, Installationspaket und GitHub Release.
 - **`stack.yml`:** baut alle Images aus dem Stand und startet `deploy/stack` mit MySQL, Caddy (TLS) und Sprach-Server.

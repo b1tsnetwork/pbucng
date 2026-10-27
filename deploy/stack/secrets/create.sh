@@ -33,5 +33,7 @@ fi
 chown 0:65532 db_password db_root_password metrics_token ucng_integration_secret ucng_admin_password voice_agent_token ldap_bind_password 2>/dev/null || echo "Hinweis: chown nicht möglich (nicht root?) – Rechte bitte selbst setzen: root:65532, 0440"
 chmod 0440 db_password db_root_password metrics_token ucng_integration_secret ucng_admin_password voice_agent_token ldap_bind_password
 # Sicherungsordner der Datenbank (Profil backup) gehört dem MySQL-Benutzer im Container (999)
-chown 999:999 ../backup/dumps 2>/dev/null && chmod 0750 ../backup/dumps || true
+if chown 999:999 ../backup/dumps 2>/dev/null; then
+	chmod 0750 ../backup/dumps
+fi
 echo "Fertig. Den Schlüssel für Sprach-Server (voice_agent_token) auf jedem voice-node als secrets/voice_agent_token ablegen."

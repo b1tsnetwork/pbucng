@@ -17,7 +17,7 @@ Der Bot ist reines Go (nur Standardbibliothek, gut 1000 Zeilen). Zum Umwandeln r
 
 ## 2. Starten mit Docker
 
-Es gibt ein offizielles Image für amd64 und arm64: `ghcr.io/<owner>/ucng-bot-music` (Tags wie
+Es gibt ein offizielles Image für amd64 und arm64: `ghcr.io/<owner>/<repo>/ucng-bot-music` (Tags wie
 beim Chat-Server: `latest`, `1.2.3`, `1.2`). Fertige compose-Datei: [`deploy/music`](../../deploy/music/compose.yml).
 Der Chat-Server läuft dabei wie in `deploy/chat/compose.yml` (Docker-Netz `ucng_default`, Dienst `ucng`).
 
@@ -35,7 +35,7 @@ Ohne compose:
 ```sh
 docker run -d --name ucng-bot-music --network ucng_default --read-only --tmpfs /tmp:size=1g,uid=10001,gid=10001 \
   -e UCNG_URL=http://ucng:8080 -e UCNG_BOT_TOKEN=gcb_… \
-  -v /pfad/zur/musik:/music ghcr.io/<owner>/ucng-bot-music:latest
+  -v /pfad/zur/musik:/music ghcr.io/<owner>/<repo>/ucng-bot-music:latest
 ```
 
 Selbst bauen (aus dem Wurzelverzeichnis des Repos): `docker build -f Dockerfile.music -t ucng-bot-music .`

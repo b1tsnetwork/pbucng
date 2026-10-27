@@ -25,13 +25,15 @@ Internes Telefonbuch (Go, LDAP/AD, MySQL/JSON, Pixel-Avatare) mit optionaler Kom
 
 | Image | Quelle | Wofür |
 |---|---|---|
-| `ghcr.io/<owner>/phonebook` | `phonebook/Dockerfile` | Telefonbuch |
-| `ghcr.io/<owner>/ucng` | `ucng/Dockerfile` | Kommunikation |
-| `ghcr.io/<owner>/ucng-voice` | `ucng/Dockerfile.voice` | abgesetzte Sprach-Server |
-| `ghcr.io/<owner>/ucng-beacon` | `ucng/Dockerfile.beacon` | Beacon (im Modus `phonebook` nicht genutzt) |
-| `ghcr.io/<owner>/ucng-bot-music` | `ucng/Dockerfile.music` | Musik-Bot (optional) |
+| `ghcr.io/<owner>/<repo>/phonebook` | `phonebook/Dockerfile` | Telefonbuch |
+| `ghcr.io/<owner>/<repo>/ucng` | `ucng/Dockerfile` | Kommunikation |
+| `ghcr.io/<owner>/<repo>/ucng-voice` | `ucng/Dockerfile.voice` | abgesetzte Sprach-Server |
+| `ghcr.io/<owner>/<repo>/ucng-beacon` | `ucng/Dockerfile.beacon` | Beacon (im Modus `phonebook` nicht genutzt) |
+| `ghcr.io/<owner>/<repo>/ucng-bot-music` | `ucng/Dockerfile.music` | Musik-Bot (optional) |
 
 Alle Images gibt es für `linux/amd64` und `linux/arm64`.
+
+Die Pakete liegen im Namensraum dieses Repositorys (für `b1tsnetwork/pbucng`: `ghcr.io/b1tsnetwork/pbucng/phonebook`, `…/ucng` usw.). Sie entstehen beim ersten Lauf von `release.yml` im Kontext dieses Repositorys, gehören zu ihm und erben seine Zugriffsrechte. Gleichnamige Pakete der früheren Repos (`ghcr.io/b1tsnetwork/phonebook`, `…/ucng`) bleiben davon unberührt.
 
 ### Über GitHub bauen (empfohlen)
 
@@ -56,7 +58,7 @@ Ein Push auf `main` baut die Images mit den Tags `main`, `sha-…` und `latest`.
 ```sh
 docker login ghcr.io                                    # oder die eigene Registry
 ./build-images.sh --dry-run                             # zeigt, was gebaut wird
-REGISTRY=ghcr.io/b1tsnetwork VERSION=1.0.0-rc.1 ./build-images.sh --push
+REGISTRY=ghcr.io/b1tsnetwork/pbucng VERSION=1.0.0-rc.1 ./build-images.sh --push
 REGISTRY=registry.firma.local/telefonbuch ./build-images.sh --push --only phonebook,ucng,ucng-voice
 ```
 

@@ -20,7 +20,7 @@ name: ucng-voice
 
 services:
   voice:
-    image: ghcr.io/b1tsnetwork/ucng-voice:${UCNG_VERSION:-latest}
+    image: ghcr.io/b1tsnetwork/pbucng/ucng-voice:${UCNG_VERSION:-latest}
     container_name: ${AGENT_ID:-ucng-voice}
     hostname: ${AGENT_ID:-ucng-voice}
     restart: unless-stopped

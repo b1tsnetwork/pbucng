@@ -799,7 +799,7 @@ curl -X POST -H "Authorization: Bearer gcb_…" --data-binary @musik.opus \
 
 Das Stück wird in Echtzeit vom Chat-Server an den Relay des Kanals geschickt (auch an einen Agenten). Achte auf die Rechte an der Musik.
 
-**Fertiger Musik-Bot:** [`examples/bot-music`](examples/bot-music/README.md) spielt MP3s aus einem Ordner oder YouTube-Videos/-Playlists (`!play`, `!folder`, `!skip`, `!stop`, `!queue`, `!vol` …); YouTube-Stücke legt er dauerhaft ab und spielt sie danach ohne Anfrage bei YouTube; mit `YOUTUBE=0` spielt er nur den Ordner (z. B. lizenzfreie Musik, `!play <Begriff>` sucht darin, Künstler und Lizenz aus den Tags werden angezeigt) – als offizielles Image `ghcr.io/<owner>/ucng-bot-music` mit compose-Datei in `deploy/music`. Beim Streaming den Bot direkt mit dem Chat-Server verbinden oder im Reverse-Proxy das Puffern des Request-Bodys abschalten (nginx: `proxy_request_buffering off;`).
+**Fertiger Musik-Bot:** [`examples/bot-music`](examples/bot-music/README.md) spielt MP3s aus einem Ordner oder YouTube-Videos/-Playlists (`!play`, `!folder`, `!skip`, `!stop`, `!queue`, `!vol` …); YouTube-Stücke legt er dauerhaft ab und spielt sie danach ohne Anfrage bei YouTube; mit `YOUTUBE=0` spielt er nur den Ordner (z. B. lizenzfreie Musik, `!play <Begriff>` sucht darin, Künstler und Lizenz aus den Tags werden angezeigt) – als offizielles Image `ghcr.io/<owner>/<repo>/ucng-bot-music` mit compose-Datei in `deploy/music`. Beim Streaming den Bot direkt mit dem Chat-Server verbinden oder im Reverse-Proxy das Puffern des Request-Bodys abschalten (nginx: `proxy_request_buffering off;`).
 
 ### Mehr Sprach-Server (Agenten)
 
@@ -1196,7 +1196,7 @@ Dazu der **Musik-Bot** [`examples/bot-music`](examples/bot-music/README.md) mit 
 
 ```bash
 cd deploy/music && cp .env.example .env   # Token und Musik-Ordner eintragen
-docker compose up -d                       # Image: ghcr.io/<owner>/ucng-bot-music
+docker compose up -d                       # Image: ghcr.io/<owner>/<repo>/ucng-bot-music
 ```
 
 Schnelltest ohne Programm:
@@ -1529,11 +1529,11 @@ UCNG liegt in diesem Repository im Ordner `ucng/`, zusammen mit dem Telefonbuch 
 | Tag `v1.2.3` | `1.2.3`, `1.2`, `<git describe>` |
 
 ```bash
-docker run -p 8080:8080 -v ucng:/data -e ADMIN_PASSWORD=… ghcr.io/<owner>/ucng:latest
-docker run -p 8090:8090 -v beacon:/data -e ADMIN_PASSWORD=… ghcr.io/<owner>/ucng-beacon:latest
+docker run -p 8080:8080 -v ucng:/data -e ADMIN_PASSWORD=… ghcr.io/<owner>/<repo>/ucng:latest
+docker run -p 8090:8090 -v beacon:/data -e ADMIN_PASSWORD=… ghcr.io/<owner>/<repo>/ucng-beacon:latest
 ```
 
-Dazu `ghcr.io/<owner>/ucng-voice` (zusätzlicher Sprach-Server) und `ghcr.io/<owner>/ucng-bot-music` (Musik-Bot, [examples/bot-music](examples/bot-music/README.md)).
+Dazu `ghcr.io/<owner>/<repo>/ucng-voice` (zusätzlicher Sprach-Server) und `ghcr.io/<owner>/<repo>/ucng-bot-music` (Musik-Bot, [examples/bot-music](examples/bot-music/README.md)).
 
 **Docker Compose:** fertige Dateien liegen in `deploy/`:
 

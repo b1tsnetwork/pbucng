@@ -15,7 +15,7 @@ name: ucng-beacon
 
 services:
   beacon:
-    image: ghcr.io/b1tsnetwork/ucng-beacon:${BEACON_VERSION:-latest}
+    image: ghcr.io/b1tsnetwork/pbucng/ucng-beacon:${BEACON_VERSION:-latest}
     container_name: ucng-beacon
     restart: unless-stopped
     ports:

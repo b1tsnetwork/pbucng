@@ -12,7 +12,8 @@
 set -eu
 cd "$(dirname "$0")"
 
-REGISTRY="${REGISTRY:-ghcr.io/b1tsnetwork}"
+REGISTRY="${REGISTRY:-ghcr.io/b1tsnetwork/pbucng}"   # eigene Pakete im Namensraum des Repositorys
+REPO_URL="${REPO_URL:-https://github.com/b1tsnetwork/pbucng}"   # GHCR verknüpft die Pakete mit diesem Repository
 VERSION="${VERSION:-1.0.0-rc.1}"
 UCNG_TAGS="${UCNG_TAGS:-sqlite mysql}"          # Speicher-Treiber der Kommunikation
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
@@ -50,7 +51,8 @@ echo "$IMAGES" | while IFS='|' read -r name ctx file; do
 	if [ -n "$only" ]; then case ",$only," in *",$name,"*) ;; *) continue ;; esac; fi
 	tags="-t $REGISTRY/$name:$VERSION"
 	[ -n "$latest" ] && tags="$tags -t $REGISTRY/$name:latest"
-	cmd="docker buildx build $out $tags -f $file --build-arg VERSION=$VERSION"
+	cmd="docker buildx build $out $tags -f $file --build-arg VERSION=$VERSION --label org.opencontainers.image.source=$REPO_URL"
+	[ "$push" = 1 ] && cmd="$cmd --annotation index:org.opencontainers.image.source=$REPO_URL"
 	if [ "$ctx" = ucng ]; then
 		cmd="$cmd --build-arg TAGS=\"$UCNG_TAGS\""
 		[ -n "$SOURCE_URL" ] && cmd="$cmd --build-arg SOURCE_URL=$SOURCE_URL"

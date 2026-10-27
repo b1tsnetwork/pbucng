@@ -57,7 +57,7 @@ services:
 
   ucng-voice:
     profiles: ["voice"]
-    image: ${UCNG_VOICE_IMAGE:-ghcr.io/b1tsnetwork/ucng-voice:latest}
+    image: ${UCNG_VOICE_IMAGE:-ghcr.io/b1tsnetwork/pbucng/ucng-voice:latest}
     restart: unless-stopped
     env_file: [./deploy/communication/ucng-voice.env]
     depends_on:

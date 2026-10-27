@@ -1,5 +1,6 @@
 # Baut und veröffentlicht alles aus diesem Repository:
-#   - Container-Images in der GitHub Container Registry (ghcr.io/<owner>/…), amd64 + arm64:
+#   - Container-Images in der GitHub Container Registry, im Namensraum dieses Repositorys
+#     (ghcr.io/<owner>/<repo>/…, z. B. ghcr.io/b1tsnetwork/pbucng/ucng), amd64 + arm64:
 #       phonebook (Telefonbuch), ucng (Kommunikation), ucng-voice (Sprach-Server),
 #       ucng-beacon, ucng-bot-music
 #   - Programmdateien für Linux, Windows und macOS
@@ -39,6 +40,7 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
       owner: ${{ steps.v.outputs.owner }}
+      ns: ${{ steps.v.outputs.ns }}
       prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
       - name: Checkout
@@ -50,6 +52,9 @@ jobs:
         run: |
           set -euo pipefail
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"   # GHCR-Namen klein
+          # Eigene Pakete je Repository: ghcr.io/<owner>/<repo>/<image> – entstehen im Kontext dieses
+          # Repositorys und sind von gleichnamigen Paketen anderer Repos getrennt.
+          echo "ns=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF_NAME#v}"; else v="$(git describe --tags --always | sed 's/^v//')"; fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           pre=false; [[ "$GITHUB_REF" == refs/tags/v*-* ]] && pre=true
@@ -93,7 +98,14 @@ jobs:
         id: tags
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ needs.meta.outputs.owner }}/${{ matrix.image }}
+          images: ${{ needs.meta.outputs.ns }}/${{ matrix.image }}
+          # Quelle = dieses Repository: GHCR verknüpft das Paket damit (auch beim Mehrplattform-Index)
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          annotations: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
           # Vorabversionen (Bindestrich) bekommen weder latest noch 1.2/1 – das regelt semver selbst
           tags: |
             type=ref,event=branch
@@ -117,6 +129,7 @@ jobs:
             TAGS=${{ env.UCNG_TAGS }}
           tags: ${{ steps.tags.outputs.tags }}
           labels: ${{ steps.tags.outputs.labels }}
+          annotations: ${{ steps.tags.outputs.annotations }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
           provenance: mode=max
@@ -125,7 +138,7 @@ jobs:
       - name: Herkunftsnachweis (Attestation)
         uses: actions/attest-build-provenance@v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ needs.meta.outputs.owner }}/${{ matrix.image }}
+          subject-name: ${{ needs.meta.outputs.ns }}/${{ matrix.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
@@ -278,7 +291,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-          OWNER: ${{ needs.meta.outputs.owner }}
+          NS: ${{ needs.meta.outputs.ns }}
           VERSION: ${{ needs.meta.outputs.version }}
           PRE: ${{ needs.meta.outputs.prerelease }}
         run: |
@@ -288,7 +301,7 @@ jobs:
           {
             echo
             echo "## Container-Images"
-            for i in phonebook ucng ucng-voice ucng-beacon ucng-bot-music; do echo "- \`ghcr.io/${OWNER}/${i}:${VERSION}\`"; done
+            for i in phonebook ucng ucng-voice ucng-beacon ucng-bot-music; do echo "- \`${NS}/${i}:${VERSION}\`"; done
           } >> "$notes"
           flag=""; [ "$PRE" = true ] && flag="--prerelease"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
@@ -299,12 +312,12 @@ jobs:
       - name: Zusammenfassung
         shell: bash
         env:
-          OWNER: ${{ needs.meta.outputs.owner }}
+          NS: ${{ needs.meta.outputs.ns }}
           VERSION: ${{ needs.meta.outputs.version }}
         run: |
           {
             echo "### Images (${VERSION})"
-            for i in phonebook ucng ucng-voice ucng-beacon ucng-bot-music; do echo "- \`ghcr.io/${OWNER}/${i}:${VERSION}\`"; done
+            for i in phonebook ucng ucng-voice ucng-beacon ucng-bot-music; do echo "- \`${NS}/${i}:${VERSION}\`"; done
             echo
             echo "| Datei | SHA256 |"
             echo "|---|---|"

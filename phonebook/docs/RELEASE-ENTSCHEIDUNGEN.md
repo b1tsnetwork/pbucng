@@ -134,7 +134,7 @@ Die ausführliche Begründung der Architekturentscheidungen steht in [`integrati
 | | |
 |---|---|
 | **Aufbau** | `phonebook/` (Telefonbuch), `ucng/` (Kommunikation, AGPL), `deploy/stack/` (Installation). Die gemeinsamen Workflows stehen in `.github/` im Wurzelordner. Jeder Teil behält sein eigenes `go.mod`, seine Dockerfiles und seine Lizenzdateien. |
-| **Images** | Bleiben unter den bisherigen Namen: `ghcr.io/<owner>/phonebook`, `ucng`, `ucng-voice`, `ucng-beacon`, `ucng-bot-music`. Die Installation braucht keine Änderung. |
+| **Images** | Eigene Pakete im Namensraum des Repositorys, getrennt von den früheren Repos: `ghcr.io/b1tsnetwork/pbucng/phonebook`, `…/ucng`, `…/ucng-voice`, `…/ucng-beacon`, `…/ucng-bot-music`. Die Pakete gehören zu `pbucng` (Label `org.opencontainers.image.source`); `deploy/stack` verweist auf diese Namen. |
 | **Workflows** | `ci.yml` prüft beide Teile. `release.yml` ist ein Release mit allen Images und Programmdateien. `stack.yml` baut alle Images aus dem Stand statt sie zu holen. `cla.yml` bezieht sich auf `ucng/CLA.md`. |
 | **Lokal bauen** | `build-images.sh` (alle Images, optional `--push`). `deploy/stack/compose.build.yml` baut Telefonbuch und Kommunikation direkt aus dem Quellcode. |
 | **Quellcode-Hinweis (AGPL)** | Images und Programme zeigen auf `…/tree/<commit>/ucng`. |

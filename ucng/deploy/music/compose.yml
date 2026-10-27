@@ -18,7 +18,7 @@ name: ucng-music
 
 services:
   music:
-    image: ghcr.io/b1tsnetwork/ucng-bot-music:${UCNG_VERSION:-latest}
+    image: ghcr.io/b1tsnetwork/pbucng/ucng-bot-music:${UCNG_VERSION:-latest}
     container_name: ucng-bot-music
     restart: unless-stopped
     environment:

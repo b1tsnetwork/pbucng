@@ -18,7 +18,7 @@ services:
 
   app:
     build: .
-    # oder fertiges Image aus dem GitHub-Workflow: image: ghcr.io/<owner>/<repo>:latest
+    # oder fertiges Image aus dem GitHub-Workflow: image: ghcr.io/<owner>/<repo>/phonebook:latest
     restart: unless-stopped
     depends_on:
       db:

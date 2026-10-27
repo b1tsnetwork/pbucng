@@ -447,9 +447,9 @@ Alle Zeilen der Matrix sind mit Konten aus dem Telefonbuch geprüft (`phonebook_
 
 | Komponente | Image / Programm | Quelle | Netz |
 |---|---|---|---|
-| Telefonbuch | `ghcr.io/b1tsnetwork/phonebook:1.0.0-rc.1` | `Dockerfile` | backend, edge |
-| Kommunikation | `ghcr.io/b1tsnetwork/ucng:1.0.0-rc.1` | UCNG `Dockerfile` (`TAGS="sqlite mysql"`) | backend, edge |
-| Sprach-Server (abgesetzt) | `ghcr.io/b1tsnetwork/ucng-voice:1.0.0-rc.1` | UCNG `Dockerfile.voice` | eigener Host, `voice-node/` |
+| Telefonbuch | `ghcr.io/b1tsnetwork/pbucng/phonebook:1.0.0-rc.1` | `Dockerfile` | backend, edge |
+| Kommunikation | `ghcr.io/b1tsnetwork/pbucng/ucng:1.0.0-rc.1` | UCNG `Dockerfile` (`TAGS="sqlite mysql"`) | backend, edge |
+| Sprach-Server (abgesetzt) | `ghcr.io/b1tsnetwork/pbucng/ucng-voice:1.0.0-rc.1` | UCNG `Dockerfile.voice` | eigener Host, `voice-node/` |
 | Datenbank | `mysql:8.4` | – | backend |
 | Gateway | `caddy:2.10` | `deploy/stack/gateway/Caddyfile` | edge (einzig veröffentlicht) |
 | Spracherkennung (aus) | `speaches` (Profil `stt`) | – | backend |

@@ -4,8 +4,12 @@
 # Live-Verbindungen ohne Proxy-Puffer, WebSocket-Weiterleitung, Betriebssperren.
 set -eu
 cd "$(dirname "$0")"
+# .env legt der Betrieb an (Kopie von .env.example)
+# shellcheck source=/dev/null
 set -a; . ./.env; set +a
-mkdir -p .check && chmod 0750 .check && chgrp 65532 .check 2>/dev/null || true
+mkdir -p .check
+chmod 0750 .check
+chgrp 65532 .check 2>/dev/null || true   # ohne root: Hinweis unten bei der Prüfung
 ca=""
 if [ "${TLS_MODE:-files}" = internal ]; then
 	docker compose cp gateway:/data/caddy/pki/authorities/local/root.crt .check/ca.pem >/dev/null
