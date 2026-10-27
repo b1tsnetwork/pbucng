@@ -8,7 +8,7 @@ Internes Telefonbuch (Go, LDAP/AD, MySQL/JSON, Pixel-Avatare) mit optionaler Kom
 
 | Ordner | Inhalt | Sprache/Build | Lizenz |
 |---|---|---|---|
-| [`phonebook/`](phonebook/README.md) | Telefonbuch (Server, Weboberfläche, Windows-Symbol) | Go 1.24, eigenes `go.mod`, `Dockerfile` | intern (keine Lizenzdatei) |
+| [`phonebook/`](phonebook/README.md) | Telefonbuch (Server, Weboberfläche, Windows-Symbol) | Go 1.27, eigenes `go.mod`, `Dockerfile` | intern (keine Lizenzdatei) |
 | [`ucng/`](ucng/README.md) | Kommunikation UCNG mit Modus `phonebook`, Sprach-Server, Beacon, Musik-Bot | Go 1.27, eigenes `go.mod`, `Dockerfile*` | AGPL-3.0-or-later ([`ucng/LICENSE`](ucng/LICENSE), [`NOTICE`](ucng/NOTICE), [`TRADEMARKS.md`](ucng/TRADEMARKS.md), [`CLA.md`](ucng/CLA.md)) |
 | [`deploy/stack/`](deploy/stack/README.md) | Komplett-Installation (Compose): Gateway, MySQL, Telefonbuch, Kommunikation, Sicherung, abgesetzte Sprach-Server | Docker Compose, Caddy | – |
 | `.github/` | gemeinsame Workflows und Dependabot | GitHub Actions | – |

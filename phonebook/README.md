@@ -157,7 +157,7 @@ Die `db`-Einstellungen bleiben für die Übernahme stehen. Im JSON-Modus braucht
 
 ## Schnell ausprobieren (Demo)
 
-Voraussetzung: Go ≥ 1.24. Für den Demo-Modus genügt eine JSON-Datei, eine Datenbank ist nicht nötig:
+Voraussetzung: Go ≥ 1.27. Für den Demo-Modus genügt eine JSON-Datei, eine Datenbank ist nicht nötig:
 
 ```bash
 go mod tidy

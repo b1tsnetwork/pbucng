@@ -2,6 +2,8 @@ module telefonbuch
 
 go 1.27
 
+toolchain go1.27.3
+
 require (
 	github.com/go-ldap/ldap/v3 v3.4.15
 	github.com/go-sql-driver/mysql v1.10.1

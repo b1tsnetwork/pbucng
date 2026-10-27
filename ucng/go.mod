@@ -4,7 +4,7 @@ module ucng
 // Go unterstützt nur die beiden neuesten Hauptversionen mit Sicherheitsupdates.
 go 1.27
 
-toolchain go1.27.2
+toolchain go1.27.3
 
 require (
 	github.com/go-sql-driver/mysql v1.10.1
