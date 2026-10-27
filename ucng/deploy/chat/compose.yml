@@ -1,0 +1,107 @@
+# SPDX-FileCopyrightText: 2026 The UCNG authors (see NOTICE)
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# UCNG – Chat-Server
+#   1. .env.example nach .env kopieren und ausfüllen
+#   2. docker compose up -d
+#   3. Admin-Bereich: https://<deine-adresse>/admin
+#
+# Der Port ist nur lokal erreichbar (127.0.0.1) – davor gehört ein Reverse-Proxy mit HTTPS
+# (Caddy, nginx, Traefik …), der auf http://127.0.0.1:${UCNG_PORT:-8080} weiterleitet.
+# Wichtig für den Proxy: Server-Sent Events (Puffer aus, lange Timeouts) und WebSockets
+# für die Sprachkanäle (Upgrade-Kopfzeilen, siehe README → Sprachkanäle).
+
+name: ucng
+
+services:
+  chat:
+    image: ghcr.io/b1tsnetwork/ucng:${UCNG_VERSION:-latest}
+    container_name: ucng
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${UCNG_PORT:-8080}:8080"
+    environment:
+      # Alle Werte mit Erklärung: .env.example (README → Konfiguration).
+      # Fest im Image: ADDR=:8080, DATA_DIR=/data, BACKUP_DIR=/data/backups.
+      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL in .env setzen}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD in .env setzen}
+      MODE: ${MODE:-simple}
+      TZ: ${TZ:-Europe/Berlin}
+      # Speicher und Backups
+      STORAGE: ${STORAGE:-files}
+      DB_DSN: ${DB_DSN:-}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      # Hinter dem Reverse-Proxy: echte Client-IP aus X-Forwarded-For – nur von vertrauenswürdigen
+      # Proxys (Standard: Loopback und private Netze, z. B. das Docker-Netz).
+      TRUST_PROXY: "1"
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      # Grenzen und Spam-Bremsen
+      RATE_LIMIT: ${RATE_LIMIT:-10}
+      BOT_RATE: ${BOT_RATE:-30}
+      CLAIM_RATE: ${CLAIM_RATE:-5}
+      MAX_USERS: ${MAX_USERS:-10000}
+      NAME_TTL_DAYS: ${NAME_TTL_DAYS:-30}
+      MAX_ROOMS: ${MAX_ROOMS:-0}
+      MAX_STREAMS: ${MAX_STREAMS:-10000}
+      MAX_STREAMS_PER_IP: ${MAX_STREAMS_PER_IP:-50}
+      # Nur bei einer eigenen, veränderten Fassung (AGPL); offizielle Images bringen sie mit
+      SOURCE_URL: ${SOURCE_URL:-}
+      # Sprachkanäle (der Reverse-Proxy muss WebSockets unter /api/voice/ws durchreichen)
+      VOICE: ${VOICE:-1}
+      VOICE_BUILTIN: ${VOICE_BUILTIN:-1}
+      VOICE_MAX_PARTICIPANTS: ${VOICE_MAX_PARTICIPANTS:-200}
+      VOICE_MAX_MBIT: ${VOICE_MAX_MBIT:-50}
+      VOICE_MAX_PER_IP: ${VOICE_MAX_PER_IP:-40}
+      VOICE_AGENT_TOKEN: ${VOICE_AGENT_TOKEN:-}
+      VOICE_OFFLOAD_SCREEN: ${VOICE_OFFLOAD_SCREEN:-50}
+      VOICE_OFFLOAD_VIDEO: ${VOICE_OFFLOAD_VIDEO:-75}
+      # Untertitel und Live-Transkription über die eigene Spracherkennung (deploy/stt).
+      # Der Ton geht nur an diese Adresse, nie an fremde Dienste.
+      STT_URL: ${STT_URL:-}
+      STT_MODEL: ${STT_MODEL:-whisper-1}
+      STT_TOKEN: ${STT_TOKEN:-}
+      STT_LANGUAGE: ${STT_LANGUAGE:-}
+      STT_CONCURRENCY: ${STT_CONCURRENCY:-4}
+      TRANSCRIPT_KEEP_DAYS: ${TRANSCRIPT_KEEP_DAYS:-0}
+      # Betriebssperren (oplocks.go) – z. B. Betrieb als Add-on eines Telefonbuchs
+      LOCK_GUESTS: ${LOCK_GUESTS:-}
+      LOCK_REGISTRATION: ${LOCK_REGISTRATION:-}
+      LOCK_FEDERATION: ${LOCK_FEDERATION:-}
+      LOCK_CHANNEL_FEDERATION: ${LOCK_CHANNEL_FEDERATION:-}
+      LOCK_BEACON: ${LOCK_BEACON:-}
+      LOCK_EXTERNAL_GIFS: ${LOCK_EXTERNAL_GIFS:-}
+      PHONEBOOK_URL: ${PHONEBOOK_URL:-}
+      PHONEBOOK_INTERNAL_URL: ${PHONEBOOK_INTERNAL_URL:-}
+      PHONEBOOK_SECRET_FILE: ${PHONEBOOK_SECRET_FILE:-}
+      PHONEBOOK_REVALIDATE: ${PHONEBOOK_REVALIDATE:-}
+      PHONEBOOK_GRACE: ${PHONEBOOK_GRACE:-}
+      PHONEBOOK_LIFECYCLE: ${PHONEBOOK_LIFECYCLE:-}
+      PHONEBOOK_RETENTION_DAYS: ${PHONEBOOK_RETENTION_DAYS:-}
+      OUTBOUND_ALLOW_PRIVATE: ${OUTBOUND_ALLOW_PRIVATE:-}
+      # Nur zum Testen
+      FED_INSECURE: ${FED_INSECURE:-}
+    volumes:
+      # Kanäle, Nachrichten, Einstellungen, Bilder und Backups (/data/backups)
+      - ucng-data:/data
+    healthcheck:
+      test: ["CMD", "ucng", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  ucng-data:

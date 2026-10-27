@@ -1,0 +1,22 @@
+# Images aus dem Quellcode dieses Repositorys bauen, statt sie aus der Registry zu holen.
+# Die Images bekommen dieselben Namen wie in compose.yml (TB_IMAGE:TB_VERSION, UCNG_IMAGE:UCNG_VERSION)
+# und lassen sich danach auch in die eigene Registry schieben:
+#
+#   docker compose -f compose.yml -f compose.build.yml build
+#   docker compose -f compose.yml -f compose.build.yml push app ucng     # optional
+#   docker compose -f compose.yml -f compose.build.yml up -d
+#
+# Für mehrere Plattformen (amd64 + arm64) und alle Images: ../../build-images.sh
+services:
+  app:
+    build:
+      context: ../../phonebook
+      args:
+        VERSION: ${TB_VERSION}
+  ucng:
+    build:
+      context: ../../ucng
+      args:
+        VERSION: ${UCNG_VERSION}
+        # Speicher-Treiber: leer = Dateien (wie im Stack), "sqlite mysql" = alle (braucht Internet beim Bauen)
+        TAGS: ${UCNG_BUILD_TAGS:-}

@@ -1,0 +1,10 @@
+/telefonbuch
+/telefonbuch.exe
+/config.json
+*.pem
+.env
+/telefonbuch.json*
+/demo.json*
+/secrets/
+deploy/communication/*.env
+/dist/

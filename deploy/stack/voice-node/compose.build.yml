@@ -1,0 +1,10 @@
+# Sprach-Server aus dem Quellcode dieses Repositorys bauen (statt aus der Registry):
+#   docker compose -f compose.yml -f compose.build.yml build
+#   docker compose -f compose.yml -f compose.build.yml up -d
+services:
+  voice:
+    build:
+      context: ../../../ucng
+      dockerfile: Dockerfile.voice
+      args:
+        VERSION: ${UCNG_VERSION}

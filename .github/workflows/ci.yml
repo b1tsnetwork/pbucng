@@ -1,0 +1,232 @@
+# Prüft beide Teile des Repositorys bei jedem Pull Request und vor jedem Release (release.yml ruft
+# diesen Workflow auf):
+#   phonebook/  Telefonbuch: gofmt, go vet, Tests mit echtem MySQL 8.4, govulncheck, JS- und PowerShell-Syntax
+#   ucng/       Kommunikation (UCNG): gofmt, go vet, Tests (Race), govulncheck, JS-Syntax,
+#               Builds aller Speicher-Varianten mit Rauchtest, Musik-Bot-Image
+name: ci
+
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Bei release.yml-Aufrufen (workflow_call) nicht mit dem eigenen Lauf kollidieren.
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  phonebook:
+    name: Telefonbuch – Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: phonebook
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: telefonbuch
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ptest"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: phonebook/go.mod
+          cache-dependency-path: phonebook/go.sum
+
+      - name: Abhängigkeiten
+        run: |
+          go mod tidy
+          git diff --quiet -- go.mod go.sum || echo "::warning::phonebook/go.mod/go.sum waren nicht aktuell – lokal 'go mod tidy' ausführen und einchecken"
+
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Tests (mit MySQL)
+        env:
+          TB_TEST_DSN: root:test@tcp(127.0.0.1:3306)/telefonbuch
+        run: go test -race -count=1 ./...
+
+      - name: Schwachstellen (govulncheck)
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: JavaScript-Syntax
+        run: for f in web/js/*.js; do node --check "$f"; done
+
+      - name: PowerShell-Syntax (Windows-Symbol)
+        shell: pwsh
+        run: |
+          $bad = 0
+          foreach ($f in Get-ChildItem client/windows/*.ps1) {
+            $err = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$err)
+            foreach ($e in $err) { Write-Host "::error file=$($f.Name)::$($e.Message)"; $bad++ }
+          }
+          if ($bad) { exit 1 }
+
+  ucng-test:
+    name: UCNG – Tests
+    defaults:
+      run:
+        working-directory: ucng
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ucng/go.mod
+          cache-dependency-path: ucng/go.sum
+
+      - name: gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::Nicht mit gofmt formatiert:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test (race)
+        run: go test -race -count=1 ./...
+
+      - name: Schwachstellen (govulncheck)
+        # Immer die neueste Fassung: govulncheck muss die Go-Version kennen, mit der gebaut wird –
+        # eine alte, fest eingetragene Version bricht bei neuen Go-Releases ab (Absturz im SSA-Builder).
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: JavaScript-Syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in web/*.js web/embed/*.js cmd/ucng-beacon/web/*.js; do
+            node --check "$f"
+          done
+
+  ucng-build:
+    name: UCNG – Build (${{ matrix.tags || 'Dateien' }})
+    needs: ucng-test
+    defaults:
+      run:
+        working-directory: ucng
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Die Datenbank-Treiber sind optional (Build-Tags); hier wird jede Variante gebaut.
+        # Versionen: aus go.mod, sofern festgeschrieben (siehe scripts/drivers.sh).
+        tags: ["", "sqlite", "mysql", "sqlite mysql"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ucng/go.mod
+          cache-dependency-path: ucng/go.sum
+
+      - name: Treiber holen
+        if: matrix.tags != ''
+        shell: bash
+        run: |
+          sh scripts/drivers.sh ${{ matrix.tags }}
+
+      - name: Build UCNG
+        run: CGO_ENABLED=0 go build -tags "${{ matrix.tags }}" -trimpath -o /tmp/ucng .
+
+      - name: Build Beacon
+        run: CGO_ENABLED=0 go build -trimpath -o /tmp/ucng-beacon ./cmd/ucng-beacon
+
+      - name: Build Sprach-Relay
+        run: CGO_ENABLED=0 go build -trimpath -o /tmp/ucng-voice ./cmd/ucng-voice
+
+      - name: Build Musik-Bot
+        run: CGO_ENABLED=0 go build -trimpath -o /tmp/ucng-bot-music ./examples/bot-music
+
+      - name: Speicher-Tests mit Treiber
+        if: contains(matrix.tags, 'sqlite')
+        run: go test -tags "${{ matrix.tags }}" -count=1 -run 'SQL|Storage|Persist' .
+
+      - name: Rauchtest
+        shell: bash
+        run: |
+          set -euo pipefail
+          storage=files
+          case "${{ matrix.tags }}" in *sqlite*) storage=sqlite ;; esac
+          ADDR=127.0.0.1:18080 DATA_DIR="$RUNNER_TEMP/data" STORAGE=$storage ADMIN_PASSWORD=ci-passwort-123 /tmp/ucng &
+          ADDR=127.0.0.1:18090 DATA_DIR="$RUNNER_TEMP/beacon" ADMIN_PASSWORD=ci-passwort-123 /tmp/ucng-beacon &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/api/settings >/dev/null && curl -fsS http://127.0.0.1:18090/healthz >/dev/null; then
+              echo "Beide Programme antworten."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Programme antworten nicht"
+          exit 1
+
+  # Das Musik-Image hängt an Debian-Paketen und Downloads (yt-dlp, deno) – Fehler dort sollen
+  # schon im Pull Request auffallen, nicht erst beim Veröffentlichen.
+  ucng-music-image:
+    name: UCNG – Musik-Bot-Image
+    needs: ucng-test
+    defaults:
+      run:
+        working-directory: ucng
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ucng
+          file: ./ucng/Dockerfile.music
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ucng-bot-music:ci
+          cache-from: type=gha,scope=ucng-bot-music
+          build-args: |
+            VERSION=ci
+
+      - name: Rauchtest
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --read-only --tmpfs /tmp:uid=10001,gid=10001 --entrypoint sh ucng-bot-music:ci -c \
+            'bot-music -version && ffprobe -version >/dev/null && ffmpeg -hide_banner -encoders | grep -q libopus && yt-dlp --version && deno --version | head -1'
+          # Ohne Token beendet sich der Bot mit einer klaren Meldung (Einstieg samt yt-dlp-Update)
+          out="$(docker run --rm --read-only --tmpfs /tmp:uid=10001,gid=10001 -e YTDLP_UPDATE=0 ucng-bot-music:ci 2>&1 || true)"
+          echo "$out"
+          grep -q "UCNG_BOT_TOKEN" <<<"$out"

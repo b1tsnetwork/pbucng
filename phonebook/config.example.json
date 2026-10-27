@@ -1,0 +1,135 @@
+{
+  "addr": ":8080",
+  "publicURL": "https://telefonbuch.firma.local",
+  "trustedProxies": ["127.0.0.1"],
+
+  "tls": { "certFile": "", "keyFile": "" },
+
+  "storage": {
+    "mode": "mysql",
+    "jsonPath": "/var/lib/telefonbuch/telefonbuch.json",
+    "jsonAuditPath": "",
+    "jsonSnapshotInterval": "1h",
+    "mysqlImport": "off",
+    "mysqlImportInterval": "",
+    "mysqlImportMinPercent": 50,
+    "fallbackToJSON": true,
+    "fallbackRetry": "30s"
+  },
+
+  "db": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "telefonbuch",
+    "password": "",
+    "name": "telefonbuch",
+    "tls": ""
+  },
+
+  "auth": {
+    "mode": "ldap",
+    "sessionIdle": "2h",
+    "sessionMax": "12h",
+    "cookieSecure": "auto",
+    "maxFailsPerIP": 20,
+    "maxFailsPerUser": 5,
+    "lockDuration": "10m",
+    "publicDirectory": true,
+    "devAdmin": false,
+    "devAdminUser": "devadmin",
+    "adRecheck": "15m"
+  },
+
+  "ldap": {
+    "url": "ldaps://dc01.firma.local:636",
+    "caFile": "/etc/telefonbuch/firma-root-ca.pem",
+    "timeout": "10s",
+    "bindDN": "CN=svc-telefonbuch,OU=Dienstkonten,DC=firma,DC=local",
+    "bindPassword": "",
+    "baseDN": "OU=Benutzer,DC=firma,DC=local",
+    "userFilter": "(&(objectCategory=person)(objectClass=user)(sAMAccountName={username}))",
+    "adminGroupDN": "CN=GG-Telefonbuch-Admins,OU=Gruppen,DC=firma,DC=local",
+    "userGroupDN": "",
+    "nestedGroups": true,
+    "attributes": {
+      "username": "sAMAccountName",
+      "lastName": "sn",
+      "firstName": "givenName",
+      "displayName": "displayName",
+      "phone": "telephoneNumber",
+      "mobile": "mobile",
+      "room": "physicalDeliveryOfficeName",
+      "amt": "department",
+      "email": "mail",
+      "guid": "objectGUID"
+    }
+  },
+
+  "adSync": {
+    "enabled": false,
+    "interval": "6h",
+    "baseDN": "",
+    "filter": "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))",
+    "pageSize": 500,
+    "fields": ["lastName", "firstName", "phone", "mobile", "room", "amt", "email"],
+    "deactivateMissing": true,
+    "maxDeactivatePercent": 30,
+    "skipWithoutPhone": false
+  },
+
+  "features": {
+    "userCreatesTags": true,
+    "maxTagsPerUser": 40,
+    "maxPrivateContacts": 300,
+    "autoCreateOnLogin": true,
+    "absences": "all",
+    "reports": true,
+    "maxOpenReportsPerUser": 20
+  },
+
+  "monitoring": {
+    "metrics": true,
+    "token": "",
+    "allow": ["127.0.0.0/8", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"]
+  },
+
+  "communication": {
+    "enabled": false,
+    "mode": "phonebook",
+    "publicBaseURL": "https://kommunikation.firma.local",
+    "internalBaseURL": "http://ucng:8080",
+    "serviceCredentialFile": "/run/secrets/ucng_integration_secret",
+    "features": {
+      "chat": true,
+      "media": true,
+      "voice": true,
+      "temporaryRooms": true,
+      "transcription": false,
+      "bots": true,
+      "federation": false,
+      "beacon": false
+    },
+    "defaultTranscriptRetentionDays": 14,
+    "autoCreateOrgRooms": false,
+    "orgRoomLevels": [],
+    "probeInterval": "30s",
+    "access": { "users": [], "groups": [], "allowLocal": true },
+    "roles": {
+      "adminUsers": [],
+      "adminGroups": [],
+      "moderatorUsers": [],
+      "moderatorGroups": [],
+      "phonebookAdminsAreUCNGAdmins": false
+    },
+    "adRecheck": "15m",
+    "adGrace": "1h"
+  },
+
+  "clientLog": {
+    "enabled": false,
+    "key": "",
+    "retentionDays": 90
+  },
+
+  "timezone": "Europe/Berlin"
+}

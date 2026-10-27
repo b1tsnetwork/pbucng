@@ -1,0 +1,137 @@
+# Prüft die Referenz-Installation deploy/stack (Compose) – bei Änderungen daran und vor Releases.
+# Die Images für Telefonbuch, Kommunikation und Sprach-Server baut der Workflow aus diesem Stand.
+#  validate: Compose-Dateien (alle Profile), Caddyfiles (alle TLS-Arten), Shell-Skripte
+#  smoke:    echter Start mit MySQL, Caddy (TLS_MODE=internal), Telefonbuch, Kommunikation und
+#            einem abgesetzten Sprach-Server (alle aus diesem Stand gebaut); danach check.sh,
+#            Datenbank-Sicherung und Anmeldung des Sprach-Servers.
+name: Stack
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+    paths: ["deploy/stack/**", "phonebook/**", "ucng/**", ".github/workflows/stack.yml"]
+  pull_request:
+    paths: ["deploy/stack/**", "phonebook/Dockerfile", "phonebook/commcheck.go", "phonebook/config.go", "phonebook/communication.go", "ucng/Dockerfile*", "ucng/main.go", "ucng/phonebook*.go", ".github/workflows/stack.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UCNG_VERSION: ci
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: deploy/stack
+    steps:
+      - uses: actions/checkout@v7
+      - name: Platzhalter (.env, Geheimnisse)
+        run: |
+          cp .env.example .env
+          sed -i "s/^UCNG_VERSION=.*/UCNG_VERSION=$UCNG_VERSION/" .env
+          sudo sh secrets/create.sh </dev/null
+          cp voice-node/.env.example voice-node/.env
+          sed -i "s/^UCNG_VERSION=.*/UCNG_VERSION=$UCNG_VERSION/" voice-node/.env
+          sudo install -m 0440 -g 65532 secrets/voice_agent_token voice-node/secrets/voice_agent_token
+      - name: Compose (alle Profile)
+        run: |
+          for p in "" communication communication,backup communication,backup,stt; do
+            echo "Profile: '$p'"; COMPOSE_PROFILES="$p" docker compose config -q
+          done
+          (cd voice-node && docker compose config -q)
+      - name: Caddyfiles
+        run: |
+          mkdir -p /tmp/certs
+          for n in tb comm voice; do
+            openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=$n.localhost" \
+              -keyout /tmp/certs/$n.key -out /tmp/certs/$n.crt 2>/dev/null
+          done
+          chmod 0644 /tmp/certs/*
+          for m in files internal acme; do
+            docker run --rm -e TB_DOMAIN=telefonbuch.localhost -e COMM_DOMAIN=kommunikation.localhost \
+              -e VOICE_DOMAIN=voice1.localhost -e TLS_MODE=$m \
+              -v "$PWD/gateway/Caddyfile:/etc/caddy/Caddyfile:ro" -v "$PWD/voice-node/Caddyfile:/etc/caddy/Voice:ro" \
+              -v /tmp/certs:/certs:ro caddy:2.10 sh -c \
+              'caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile && caddy validate --adapter caddyfile --config /etc/caddy/Voice'
+          done
+      - name: Shell-Skripte
+        run: shellcheck -s sh check.sh secrets/create.sh backup/mysql-backup.sh
+
+  smoke:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: deploy/stack
+    steps:
+      - uses: actions/checkout@v7
+      - name: Images aus diesem Stand bauen
+        working-directory: .
+        run: |
+          docker build -t telefonbuch-ci:ci --build-arg VERSION=ci phonebook
+          docker build -t ucng-ci:ci --build-arg VERSION=ci ucng
+          docker build -t ucng-voice-ci:ci --build-arg VERSION=ci -f ucng/Dockerfile.voice ucng
+      - name: Einrichten (TLS_MODE=internal, lokale Konten statt AD)
+        run: |
+          cp .env.example .env
+          sed -i -e "s/^UCNG_VERSION=.*/UCNG_VERSION=ci/" -e "s/^TB_VERSION=.*/TB_VERSION=ci/" \
+            -e "s/^TLS_MODE=.*/TLS_MODE=internal/" -e "s/^TB_DOMAIN=.*/TB_DOMAIN=telefonbuch.localhost/" \
+            -e "s/^COMM_DOMAIN=.*/COMM_DOMAIN=kommunikation.localhost/" .env
+          printf 'TB_IMAGE=telefonbuch-ci\nUCNG_IMAGE=ucng-ci\n' >> .env
+          sudo sh secrets/create.sh </dev/null
+          # LDAP ist im Test aus (kein AD); die Konfiguration verlangt trotzdem eine CA-Datei
+          openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=Test-CA" -keyout /dev/null -out config/ca/firma-root-ca.pem 2>/dev/null
+          cat > ci.override.yml <<'YML'
+          services:
+            app:
+              environment:
+                TB_AUTH_MODE: local
+          YML
+      - name: Starten
+        run: docker compose -f compose.yml -f ci.override.yml up -d --wait --wait-timeout 180
+      - name: check.sh (durch den Gateway, mit TLS)
+        run: |
+          sed -i 's/docker compose run/docker compose -f compose.yml -f ci.override.yml run/' check.sh
+          sudo sh check.sh
+      - name: Datenbank-Sicherung
+        run: |
+          docker compose -f compose.yml -f ci.override.yml run --rm db-backup now
+          sudo ls -l backup/dumps | grep -q 'telefonbuch-.*\.sql\.gz'
+      - name: Abgesetzter Sprach-Server
+        working-directory: deploy/stack/voice-node
+        run: |
+          printf 'UCNG_VERSION=%s\nUCNG_VOICE_IMAGE=ucng-voice-ci\nAGENT_ID=voice1\nVOICE_DOMAIN=voice1.localhost\nCOMM_DOMAIN=kommunikation.localhost\nTLS_MODE=internal\nHTTP_PORT=8081\nHTTPS_PORT=8444\n' \
+            "$UCNG_VERSION" > .env
+          sudo install -m 0440 -g 65532 ../secrets/voice_agent_token secrets/voice_agent_token
+          sudo install -m 0444 ../.check/ca.pem /tmp/stack-ca.pem
+          cat > ci.override.yml <<'YML'
+          services:
+            voice:
+              environment:
+                CONTROL_URL: http://voice1:8090/control
+                SSL_CERT_FILE: /stack-ca.pem
+              volumes: ["/tmp/stack-ca.pem:/stack-ca.pem:ro"]
+              extra_hosts: ["kommunikation.localhost:172.30.10.2"]
+              networks: [edge, stack]
+          networks:
+            stack:
+              external: true
+              name: telefonbuch_edge
+          YML
+          docker compose -f compose.yml -f ci.override.yml up -d --wait --wait-timeout 120
+          for i in $(seq 1 30); do
+            docker logs telefonbuch-ucng-1 2>&1 | grep -q 'Agent voice1 angemeldet' && exit 0; sleep 2
+          done
+          echo "::error::Sprach-Server hat sich nicht angemeldet"; exit 1
+      - name: Protokolle
+        if: always()
+        run: |
+          docker compose -f compose.yml -f ci.override.yml ps -a || true
+          docker compose -f compose.yml -f ci.override.yml logs --no-color --tail 200 || true
+          (cd voice-node && docker compose logs --no-color --tail 100) || true

@@ -1,0 +1,102 @@
+# Abgesetzter Sprach-Server (ucng-voice) für die Kommunikation – je Server eine Installation.
+#
+#   1. Auf dem Haupt-Server: sh secrets/create.sh hat secrets/voice_agent_token erzeugt.
+#      Diese Datei hierher nach secrets/voice_agent_token kopieren (Rechte root:65532, 0440).
+#   2. .env.example → .env kopieren und ausfüllen (VOICE_DOMAIN, COMM_DOMAIN, AGENT_ID, Version)
+#   3. Zertifikat: TLS_MODE wie am Haupt-Server (files: certs/voice.crt + voice.key)
+#   4. docker compose up -d
+#   5. Im Admin-Bereich der Kommunikation (/admin → Sprach-Server) erscheint der Server mit Name
+#      und Funktionen. Neue Sprachräume verteilt der Chat-Server auf die angemeldeten Server.
+#
+# Von außen erreichbar (443): /ws (Browser, WebSocket) und /control (nur der Chat-Server, mit
+# Schlüssel). Firewall: 443/tcp eingehend von Clients und vom Haupt-Server; ausgehend 443 zum
+# Haupt-Server (Anmeldung des Agenten unter https://COMM_DOMAIN).
+
+name: ucng-voice
+
+services:
+  voice:
+    image: ${UCNG_VOICE_IMAGE:-ghcr.io/b1tsnetwork/ucng-voice}:${UCNG_VERSION:?UCNG_VERSION in .env setzen (gleich wie am Haupt-Server)}
+    hostname: ${AGENT_ID:-voice1}
+    restart: unless-stopped
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    group_add: ["65532"]   # liest secrets/voice_agent_token (Gruppe 65532, wie am Haupt-Server)
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      CHAT_URL: https://${COMM_DOMAIN:?COMM_DOMAIN in .env setzen}
+      AGENT_TOKEN_FILE: /run/secrets/voice_agent_token
+      AGENT_ID: ${AGENT_ID:-voice1}
+      PUBLIC_URL: wss://${VOICE_DOMAIN:?VOICE_DOMAIN in .env setzen}
+      CONTROL_URL: https://${VOICE_DOMAIN}/control
+      ROLE: ${ROLE:-}
+      MAX_PARTICIPANTS: ${MAX_PARTICIPANTS:-200}
+      MAX_MBIT: ${MAX_MBIT:-50}
+      MAX_PER_IP: ${MAX_PER_IP:-40}
+      # Browser dürfen nur von der Kommunikation aus verbinden
+      ALLOWED_ORIGINS: https://${COMM_DOMAIN}
+      TRUST_PROXY: "1"
+      TRUSTED_PROXIES: ${GATEWAY_IP:-172.31.10.2}/32
+      # Spracherkennung auf diesem Server: nur nach Freigabe (ADR-011), sonst leer lassen
+      STT_URL: ${STT_URL:-}
+      STT_MODEL: ${STT_MODEL:-Systran/faster-whisper-small}
+      STT_LANGUAGE: ${STT_LANGUAGE:-de}
+      STT_CONCURRENCY: ${STT_CONCURRENCY:-4}
+    secrets: [voice_agent_token]
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "ucng-voice", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  gateway:
+    image: caddy:${CADDY_VERSION:-2.10}
+    restart: unless-stopped
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    tmpfs: ["/tmp:size=16m"]
+    depends_on:
+      voice: { condition: service_healthy }
+    environment:
+      VOICE_DOMAIN: ${VOICE_DOMAIN}
+      TLS_MODE: ${TLS_MODE:-files}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: ${GATEWAY_IP:-172.31.10.2}
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: ${EDGE_SUBNET:-172.31.10.0/24}
+          # andere Container bekommen Adressen nur aus dem oberen Bereich – die feste
+          # Gateway-Adresse (GATEWAY_IP, unterer Bereich) bleibt immer frei
+          ip_range: ${EDGE_IP_RANGE:-172.31.10.128/25}
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+secrets:
+  voice_agent_token: { file: ./secrets/voice_agent_token }

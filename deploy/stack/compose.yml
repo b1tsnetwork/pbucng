@@ -1,0 +1,223 @@
+# Telefonbuch mit Kommunikation (UCNG) – Referenz-Installation für den Release Candidate
+#
+#   1. .env.example → .env kopieren und ausfüllen (Adressen, Versionen, TLS)
+#   2. Geheimnisse anlegen:            sh secrets/create.sh
+#   3. Telefonbuch-Konfiguration:      config/telefonbuch.json anpassen (LDAP/AD)
+#   4. Starten:                        docker compose up -d
+#      + abgesetzte Sprach-Server:     voice-node/ (je Server eine Installation)
+#      + Spracherkennung:              --profile stt (erst nach Freigabe, ADR-011)
+#      + Datenbank-Sicherung:          --profile backup
+#   5. Prüfen:                         sh check.sh
+#
+# Nur der Gateway ist von außen erreichbar (80/443). Datenbank, Telefonbuch und Kommunikation
+# sprechen nur im internen Netz miteinander. Alle Dienste laufen ohne Root-Rechte, mit
+# schreibgeschütztem Dateisystem (außer MySQL) und ohne zusätzliche Linux-Capabilities.
+
+name: telefonbuch
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  db:
+    image: mysql:${MYSQL_VERSION:-8.4}
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    # direkt als Benutzer mysql (999) mit Gruppe 65532: liest die Geheimnisse (root:65532, 0440)
+    user: "999:999"
+    group_add: ["65532"]
+    environment:
+      MYSQL_DATABASE: telefonbuch
+      MYSQL_USER: telefonbuch
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      TZ: ${TZ:-Europe/Berlin}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    secrets: [db_password, db_root_password]
+    volumes:
+      - db-data:/var/lib/mysql
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  app:
+    <<: *hardening
+    image: ${TB_IMAGE:-ghcr.io/b1tsnetwork/phonebook}:${TB_VERSION:?TB_VERSION in .env setzen (z. B. 1.0.0-rc.1)}
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      TB_PUBLIC_URL: https://${TB_DOMAIN:?TB_DOMAIN in .env setzen}
+      TB_TRUSTED_PROXIES: ${GATEWAY_IP:-172.30.10.2}/32   # nur der Gateway darf X-Forwarded-For setzen
+      TB_DB_HOST: db
+      TB_DB_PASSWORD_FILE: /run/secrets/db_password
+      TB_LDAP_BIND_PASSWORD_FILE: /run/secrets/ldap_bind_password
+      TB_METRICS_TOKEN_FILE: /run/secrets/metrics_token
+      TB_JSON_PATH: /data/telefonbuch.json
+      # Kommunikations-Add-on (ADR-002: ohne diese Zeilen läuft das Telefonbuch allein)
+      TB_COMMUNICATION_ENABLED: ${COMMUNICATION_ENABLED:-true}
+      TB_COMMUNICATION_PUBLIC_URL: https://${COMM_DOMAIN:?COMM_DOMAIN in .env setzen}
+      TB_COMMUNICATION_INTERNAL_URL: http://ucng:8080
+      TB_COMMUNICATION_SECRET_FILE: /run/secrets/ucng_integration_secret
+    secrets: [db_password, ldap_bind_password, metrics_token, ucng_integration_secret]
+    volumes:
+      - ./config/telefonbuch.json:/etc/telefonbuch/config.json:ro
+      - ./config/ca:/etc/telefonbuch/ca:ro   # Stammzertifikat der Firma (LDAPS), siehe config/ca/README.md
+      - tb-data:/data                        # JSON-Kopie (Rückfall bei Datenbank-Ausfall)
+    networks: [backend, edge]
+    healthcheck:
+      test: ["CMD", "/telefonbuch", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  ucng:
+    <<: *hardening
+    profiles: ["communication"]   # in .env: COMPOSE_PROFILES=communication (Standard)
+    image: ${UCNG_IMAGE:-ghcr.io/b1tsnetwork/ucng}:${UCNG_VERSION:?UCNG_VERSION in .env setzen (Stand mit MODE=phonebook)}
+    environment:
+      TZ: ${TZ:-Europe/Berlin}
+      # Sicherheitsprofil – fest: Anmeldung nur über das Telefonbuch, alle Betriebssperren
+      MODE: phonebook
+      PUBLIC_URL: https://${COMM_DOMAIN}
+      PHONEBOOK_URL: https://${TB_DOMAIN}
+      PHONEBOOK_INTERNAL_URL: http://app:8080
+      PHONEBOOK_SECRET_FILE: /run/secrets/ucng_integration_secret
+      PHONEBOOK_REVALIDATE: ${UCNG_PHONEBOOK_REVALIDATE:-5m}
+      PHONEBOOK_GRACE: ${UCNG_PHONEBOOK_GRACE:-15m}
+      PHONEBOOK_LIFECYCLE: ${UCNG_PHONEBOOK_LIFECYCLE:-6h}
+      PHONEBOOK_RETENTION_DAYS: ${UCNG_PHONEBOOK_RETENTION_DAYS:-90}
+      ADMIN_PASSWORD_FILE: /run/secrets/ucng_admin_password
+      TRUST_PROXY: "1"
+      TRUSTED_PROXIES: ${GATEWAY_IP:-172.30.10.2}/32
+      DATA_DIR: /data
+      BACKUP_DIR: /data/backups
+      BACKUP_KEEP: ${UCNG_BACKUP_KEEP:-14}
+      # Sprachkanäle: eingebauter Relay + optional weitere Sprach-Server (voice-node/)
+      VOICE: "1"
+      VOICE_BUILTIN: ${UCNG_VOICE_BUILTIN:-1}
+      VOICE_AGENT_TOKEN_FILE: /run/secrets/voice_agent_token
+      # Spracherkennung nur selbst betrieben und erst nach Freigabe (ADR-011)
+      STT_URL: ${UCNG_STT_URL:-}
+      STT_MODEL: ${UCNG_STT_MODEL:-Systran/faster-whisper-small}
+      STT_LANGUAGE: ${UCNG_STT_LANGUAGE:-de}
+      TRANSCRIPT_KEEP_DAYS: ${UCNG_TRANSCRIPT_KEEP_DAYS:-14}
+    secrets: [ucng_integration_secret, ucng_admin_password, voice_agent_token]
+    group_add: ["65532"]   # liest das gemeinsame Geheimnis (Gruppe des Telefonbuch-Containers)
+    volumes:
+      - ucng-data:/data    # eigene Daten und tägliche Sicherungen der Kommunikation
+    networks: [backend, edge]
+    healthcheck:
+      test: ["CMD", "ucng", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  gateway:
+    image: caddy:${CADDY_VERSION:-2.10}
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    depends_on:
+      app: { condition: service_healthy }
+      ucng: { condition: service_healthy, required: false }
+    environment:
+      TB_DOMAIN: ${TB_DOMAIN}
+      COMM_DOMAIN: ${COMM_DOMAIN}
+      TLS_MODE: ${TLS_MODE:-files}           # files | internal | acme
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./gateway/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./gateway/certs:/certs:ro            # bei TLS_MODE=files: tb.crt/tb.key, comm.crt/comm.key
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      edge:
+        ipv4_address: ${GATEWAY_IP:-172.30.10.2}
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  stt:
+    profiles: ["stt"]
+    # Spracherkennung (OpenAI-kompatibel), nur intern erreichbar. Erst einschalten, wenn die
+    # Live-Transkription organisatorisch freigegeben ist (ADR-011) – dann UCNG_STT_URL setzen und
+    # im Telefonbuch communication.features.transcription = true.
+    image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-latest-cpu}   # im Betrieb eine feste Version eintragen
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - stt-cache:/home/ubuntu/.cache/huggingface
+    networks: [backend]
+
+  db-backup:
+    profiles: ["backup"]
+    image: mysql:${MYSQL_VERSION:-8.4}
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      db: { condition: service_healthy }
+    user: "999:999"           # Sicherungsordner: chown 999 backup/dumps (siehe README)
+    group_add: ["65532"]
+    read_only: true
+    cap_drop: ["ALL"]
+    entrypoint: ["sh", "/backup/mysql-backup.sh"]
+    environment:
+      BACKUP_KEEP_DAYS: ${DB_BACKUP_KEEP_DAYS:-14}
+      BACKUP_TIME: ${DB_BACKUP_TIME:-02:30}
+      TZ: ${TZ:-Europe/Berlin}
+    secrets: [db_root_password]
+    volumes:
+      - ./backup/mysql-backup.sh:/backup/mysql-backup.sh:ro
+      - ${DB_BACKUP_DIR:-./backup/dumps}:/dumps
+    networks: [backend]
+
+networks:
+  backend:
+    internal: false   # das Telefonbuch braucht das AD (LDAPS) außerhalb von Docker
+  edge:
+    ipam:
+      config:
+        - subnet: ${EDGE_SUBNET:-172.30.10.0/24}
+          # andere Container bekommen Adressen nur aus dem oberen Bereich – die feste
+          # Gateway-Adresse (GATEWAY_IP, unterer Bereich) bleibt immer frei
+          ip_range: ${EDGE_IP_RANGE:-172.30.10.128/25}
+
+volumes:
+  db-data:
+  tb-data:
+  ucng-data:
+  caddy-data:
+  caddy-config:
+  stt-cache:
+
+secrets:
+  db_password:            { file: ./secrets/db_password }
+  db_root_password:       { file: ./secrets/db_root_password }
+  ldap_bind_password:     { file: ./secrets/ldap_bind_password }
+  metrics_token:          { file: ./secrets/metrics_token }
+  ucng_integration_secret: { file: ./secrets/ucng_integration_secret }
+  ucng_admin_password:    { file: ./secrets/ucng_admin_password }
+  voice_agent_token:      { file: ./secrets/voice_agent_token }

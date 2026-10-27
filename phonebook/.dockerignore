@@ -1,0 +1,21 @@
+.git
+.github
+*.md
+!README.md
+config.json
+*.pem
+.env
+telefonbuch
+*.json.bak
+telefonbuch.json
+*.audit.json
+demo.json
+data/
+secrets/
+deploy/communication/*.env
+# Installationen und Geheimnisse gehören nie in den Build-Kontext (RC)
+deploy/
+**/secrets/
+**/*.pem
+**/*.key
+**/.env

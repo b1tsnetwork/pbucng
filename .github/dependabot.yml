@@ -1,0 +1,56 @@
+# Dependabot: wöchentliche Update-PRs für GitHub Actions, Go-Module und Docker-Basis-Images beider
+# Teile (phonebook/, ucng/). Kleinere Updates werden je Bereich in einem PR gebündelt.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Berlin }
+    commit-message: { prefix: "deps(actions)" }
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Telefonbuch: mysql-Treiber, go-ldap und deren Abhängigkeiten
+  - package-ecosystem: gomod
+    directory: /phonebook
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Berlin }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(phonebook)" }
+    groups:
+      phonebook-go:
+        update-types: [minor, patch]
+
+  # UCNG kommt ohne externe Go-Module aus; die optionalen Datenbank-Treiber werden erst beim Bauen
+  # geholt (siehe deps.yml). Dieser Eintrag greift, sobald go.mod Abhängigkeiten bekommt.
+  - package-ecosystem: gomod
+    directory: /ucng
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Berlin }
+    commit-message: { prefix: "deps(ucng)" }
+    groups:
+      ucng-go:
+        update-types: [minor, patch]
+
+  # Basis-Images: phonebook/Dockerfile (golang, distroless)
+  - package-ecosystem: docker
+    directory: /phonebook
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Berlin }
+    commit-message: { prefix: "deps(docker)" }
+
+  # Basis-Images: ucng/Dockerfile, Dockerfile.beacon, Dockerfile.voice, Dockerfile.music
+  - package-ecosystem: docker
+    directory: /ucng
+    schedule: { interval: weekly, day: monday, time: "06:00", timezone: Europe/Berlin }
+    commit-message: { prefix: "deps(docker)" }
+    groups:
+      base-images:
+        patterns: ["*"]
+
+  # phonebook/docker-compose.yml (MySQL): auf der LTS-Linie 8.4 bleiben
+  - package-ecosystem: docker-compose
+    directory: /phonebook
+    schedule: { interval: monthly, timezone: Europe/Berlin }
+    commit-message: { prefix: "deps(compose)" }
+    ignore:
+      - dependency-name: mysql
+        update-types: [version-update:semver-major, version-update:semver-minor]

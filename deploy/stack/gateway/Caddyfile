@@ -1,0 +1,65 @@
+# Gateway für Telefonbuch und Kommunikation (Subdomain-Betrieb, ADR-004)
+#
+# TLS_MODE (in .env):
+#   files    – eigene Zertifikate (Firmen-CA): gateway/certs/tb.crt, tb.key, comm.crt, comm.key
+#   internal – Caddy erzeugt eine eigene CA (Test/Abnahme; Stammzertifikat an die Clients verteilen)
+#   acme     – öffentliche Zertifikate per ACME (nur bei öffentlich auflösbaren Namen)
+#
+# Danach immer prüfen:  sh check.sh   (telefonbuch commcheck – SSE ohne Puffer, WebSocket, Sperren)
+
+{
+	admin off
+	email {$ACME_EMAIL:hostmaster@localhost}
+}
+
+(tls-files) {
+	tls /certs/{args[0]}.crt /certs/{args[0]}.key
+}
+(tls-internal) {
+	tls internal
+}
+(tls-acme) {
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$TB_DOMAIN} {
+	import tls-{$TLS_MODE:files} tb
+	import common
+	# Server-zu-Server-Schnittstellen nur intern (UCNG ruft http://app:8080 direkt auf)
+	@internal path /api/internal/*
+	respond @internal 404
+	reverse_proxy app:8080 {
+		transport http {
+			read_timeout 10m   # manueller AD-Abgleich kann dauern
+		}
+	}
+}
+
+{$COMM_DOMAIN} {
+	import tls-{$TLS_MODE:files} comm
+	import common
+	# vom Telefonbuch nur intern aufgerufen (http://ucng:8080)
+	@s2s path /api/integration/phonebook/revoke /api/integration/phonebook/org /api/integration/phonebook/news
+	respond @s2s 404
+	request_body {
+		max_size 10MB
+	}
+	# Live-Verbindungen (Server-Sent Events) ohne Puffer, Sprachkanäle (WebSocket) mit langen Zeiten
+	reverse_proxy ucng:8080 {
+		flush_interval -1
+		transport http {
+			read_timeout 0
+			write_timeout 0
+		}
+	}
+}

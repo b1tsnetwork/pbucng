@@ -1,0 +1,36 @@
+# Gateway eines abgesetzten Sprach-Servers: nur /ws, /control und /healthz, sonst 404.
+{
+	admin off
+	email {$ACME_EMAIL:hostmaster@localhost}
+}
+
+(tls-files) {
+	tls /certs/voice.crt /certs/voice.key
+}
+(tls-internal) {
+	tls internal
+}
+(tls-acme) {
+}
+
+{$VOICE_DOMAIN} {
+	import tls-{$TLS_MODE:files}
+	header -Server
+	log {
+		output stdout
+		format json
+	}
+	@voice path /ws /control /healthz
+	handle @voice {
+		reverse_proxy voice:8090 {
+			flush_interval -1
+			transport http {
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+}

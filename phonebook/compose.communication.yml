@@ -1,0 +1,81 @@
+# Kommunikations-Add-on (UCNG) – optional, Subdomain-Betrieb (ADR-004).
+# Nur zusammen mit der Basisdatei verwenden:
+#
+#   docker compose -f docker-compose.yml -f compose.communication.yml --profile communication up -d
+#   (+ --profile voice für einen zusätzlichen Sprach-Server, + --profile stt für die Spracherkennung)
+#
+# Für eine vollständige Installation (Gateway, Geheimnisse, Sicherung, abgesetzte Sprach-Server,
+# gehärtete Container) ist deploy/stack/ die Referenz – diese Datei ist der Minimalweg.
+#
+# Ohne diese Datei läuft das Telefonbuch unverändert und ohne jede Verbindung zu UCNG (ADR-002).
+# Vorbereitung siehe deploy/communication/README.md (Secret, Umgebungsdatei, Gateway).
+
+services:
+  app:
+    # Telefonbuch: Add-on einschalten und das gemeinsame Geheimnis bereitstellen
+    environment:
+      TB_COMMUNICATION_ENABLED: "true"
+      TB_COMMUNICATION_PUBLIC_URL: ${UCNG_PUBLIC_URL:?UCNG_PUBLIC_URL fehlt (z. B. https://kommunikation.firma.local)}
+      TB_COMMUNICATION_INTERNAL_URL: http://ucng:8080
+      TB_COMMUNICATION_SECRET_FILE: /run/secrets/ucng_integration_secret
+    secrets: [ucng_integration_secret]
+
+  ucng:
+    profiles: ["communication"]
+    # Image aus dem Branch „phonebook-integration“ (Betriebssperren, MODE=phonebook).
+    # Ein Image ohne Sperren erkennt das Telefonbuch als „insecure“ und gibt die Kommunikation nicht frei.
+    image: ${UCNG_IMAGE:?UCNG_IMAGE fehlt – Image mit Betriebssperren, siehe deploy/communication/README.md}
+    restart: unless-stopped
+    env_file: [./deploy/communication/ucng.env]
+    environment:
+      # Sicherheitsprofil – bewusst hier fest und nicht in der .env-Datei (Gate A/B).
+      # MODE=phonebook: Anmeldung nur über das Telefonbuch; alle LOCK_* gelten damit automatisch.
+      MODE: phonebook
+      PHONEBOOK_URL: ${TB_PUBLIC_URL:?TB_PUBLIC_URL fehlt (öffentliche Adresse des Telefonbuchs, z. B. https://telefonbuch.firma.local)}
+      PHONEBOOK_INTERNAL_URL: http://app:8080
+      PHONEBOOK_SECRET_FILE: /run/secrets/ucng_integration_secret
+      PHONEBOOK_REVALIDATE: ${UCNG_PHONEBOOK_REVALIDATE:-5m}   # Nachprüfung der Sitzungen (ADR-013)
+      PHONEBOOK_GRACE: ${UCNG_PHONEBOOK_GRACE:-15m}            # ohne erfolgreiche Prüfung gelten Sitzungen danach nicht mehr
+      PHONEBOOK_LIFECYCLE: ${UCNG_PHONEBOOK_LIFECYCLE:-6h}     # Status-Abgleich aller Konten (Austritt, ADR-022)
+      PHONEBOOK_RETENTION_DAYS: ${UCNG_PHONEBOOK_RETENTION_DAYS:-90} # Tage nach dem Austritt bis zur Anonymisierung
+      TRUST_PROXY: "1"
+      PUBLIC_URL: ${UCNG_PUBLIC_URL:?UCNG_PUBLIC_URL fehlt}
+      TRANSCRIPT_KEEP_DAYS: ${UCNG_TRANSCRIPT_KEEP_DAYS:-14}   # 0 (= unbegrenzt) nicht verwenden, ADR-011
+      DATA_DIR: /data
+      BACKUP_DIR: /data/backups
+    group_add: ["65532"]          # darf das Secret lesen (Gruppe des Telefonbuch-Containers)
+    secrets: [ucng_integration_secret]
+    volumes:
+      - ucng-data:/data           # eigene Daten – NICHT Teil der Telefonbuch-Sicherung (Fahrplan §1)
+    healthcheck:
+      test: ["CMD", "ucng", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "127.0.0.1:8095:8080"    # nur lokal – davor der HTTPS-Gateway (deploy/gateway)
+
+  ucng-voice:
+    profiles: ["voice"]
+    image: ${UCNG_VOICE_IMAGE:-ghcr.io/b1tsnetwork/ucng-voice:latest}
+    restart: unless-stopped
+    env_file: [./deploy/communication/ucng-voice.env]
+    depends_on:
+      ucng:
+        condition: service_healthy
+
+  stt:
+    profiles: ["stt"]
+    # Spracherkennung nur selbst betrieben, keine externen Anbieter (ADR-011); Transkription erst ab PH-09
+    image: ghcr.io/speaches-ai/speaches:${STT_IMAGE_TAG:-latest-cpu}
+    restart: unless-stopped
+    volumes:
+      - stt-cache:/home/ubuntu/.cache/huggingface
+
+secrets:
+  ucng_integration_secret:
+    file: ./secrets/ucng_integration_secret
+
+volumes:
+  ucng-data:
+  stt-cache:

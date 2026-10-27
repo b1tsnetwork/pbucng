@@ -1,0 +1,6 @@
+# Wurzelordner – die Teile haben eigene .gitignore (phonebook/, ucng/, deploy/stack/)
+/dist/
+.env
+*.pem
+*.key
+.DS_Store
