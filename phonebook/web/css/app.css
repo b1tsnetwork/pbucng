@@ -1,8 +1,5 @@
-/* Komplett austauschbare app.css fuer Phonebook.
- * VORHER bisherige app.css in app.base.css umbenennen!
- * Die vorhandenen Styles bleiben ueber den Import vollstaendig erhalten.
- * Siehe README.md; nach Aenderung Phonebook neu bauen.
- */
+/* SPDX-FileCopyrightText: 2026 The UCNG authors (see NOTICE)
+   SPDX-License-Identifier: AGPL-3.0-or-later */
 @import url("./app.base.css");
 
 /*
