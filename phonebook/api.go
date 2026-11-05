@@ -204,6 +204,7 @@ func (a *App) meJSON(s *Session) map[string]any {
 			"userCreatesTags": a.cfg.Features.UserCreatesTags, "maxTags": a.cfg.Features.MaxTagsPerUser,
 			"maxPrivate": a.cfg.Features.MaxPrivate, "syncEnabled": a.cfg.Sync.Enabled, "adLocked": a.cfg.adLockedFields(),
 			"storage": a.st().Kind(), "devAdmin": a.cfg.Auth.DevAdmin, "offline": a.offline.Load(),
+			"signature": a.sigConfig(context.Background()).Enabled,
 		},
 	}
 	if c := a.commMe(context.Background(), s); c != nil { // nur mit Kommunikations-Add-on

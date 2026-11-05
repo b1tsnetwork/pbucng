@@ -29,6 +29,7 @@ Diese Referenz-Installation enthält alle Komponenten für einen Server mit Dock
 | `.env.example` | Einstellungen (Adressen, Versionen, TLS) – nach `.env` kopieren |
 | `config/telefonbuch.json` | Telefonbuch: LDAP/AD, Datenhaltung, Kommunikation |
 | `config/ca/` | Stammzertifikat der Firma (LDAPS) |
+| `config/signatur/` | optional: eigene Grunddaten und Logo der E-Mail-Signatur (nicht eingecheckt) |
 | `gateway/Caddyfile`, `gateway/certs/` | Gateway und Zertifikate |
 | `secrets/create.sh` | erzeugt alle Geheimnisse |
 | `backup/mysql-backup.sh` | tägliche Datenbank-Sicherung |

@@ -46,6 +46,12 @@ type Config struct {
 
 	Storage StorageConfig `json:"storage"`
 
+	// E-Mail-Signatur: Grunddaten aus einer eigenen Datei (Beispiel: docs/signature.example.json).
+	// Was die Verwaltung speichert, hat Vorrang. Leer = neutrale Vorgaben.
+	Signature struct {
+		File string `json:"file"`
+	} `json:"signature"`
+
 	DB struct {
 		// Entweder vollständige DSN (go-sql-driver-Format) …
 		DSN string `json:"dsn"`
@@ -318,6 +324,7 @@ func loadConfig(path string) (*Config, error) {
 	if v := os.Getenv("TB_PUBLIC_DIRECTORY"); v != "" {
 		c.Auth.PublicDirectory = v == "1" || v == "true"
 	}
+	env("TB_SIGNATURE_FILE", &c.Signature.File)
 	env("TB_STORAGE", &c.Storage.Mode)
 	env("TB_JSON_PATH", &c.Storage.JSONPath)
 	if v := os.Getenv("TB_STORAGE_FALLBACK"); v != "" {

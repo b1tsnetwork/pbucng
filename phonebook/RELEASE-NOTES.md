@@ -5,6 +5,11 @@
 
 > **Nicht für den Produktivbetrieb freigegeben**, solange die Lizenz- und Markenprüfung (ADR-016, Gate E) fehlt.
 
+
+## Neu nach rc.1
+
+- **E-Mail-Signatur** (Benutzermenü → „✉ E-Mail-Signatur“): Outlook-Signatur nach Styleguide, vorausgefüllt aus dem eigenen Eintrag und dem Organigramm (Amt, Sachgebiet, Dienstgebäude der Einheit), mit eigenen Ergänzungen. Grunddaten, Logo und Dienstgebäude pflegt die Verwaltung unter „✉ Signatur verwalten“. Keine Migration; gespeichert wird in den vorhandenen Tabellen `settings` und `user_prefs`.
+
 ## Neu seit dem letzten Stand (PH-05)
 
 **Profilbild**

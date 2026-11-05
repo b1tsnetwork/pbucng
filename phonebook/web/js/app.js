@@ -6,6 +6,7 @@ import * as A from './avatar.js';
 import { personPicker, amtPicker } from './picker.js';
 import * as F from './fun.js';
 import * as T from './tasks.js';
+import { signatureDialog, signatureAdmin } from './signature.js';
 
 // Kategorien kommen vom Server (administrativ pflegbar)
 const catName = (k) => S.catByKey.get(k)?.name || k;
@@ -724,6 +725,7 @@ function toggleMenu() {
   ];
   if (S.site.absences !== 'off') items.push(item('🏖 Meine Abwesenheit', () => editAbsences(me), { disabled: !me }));
   if (S.site.reports !== false) items.push(item('🙋 Fehlende Person melden', () => reportMissingDialog()), item('🚩 Meine Meldungen', myReportsDialog));
+  if (S.me.features && S.me.features.signature) items.push(item('✉ E-Mail-Signatur', signatureDialog, { title: 'Signatur für Outlook aus deinem Telefonbucheintrag' }));
   items.push(item('★ Favoriten im Windows-Symbol …', feedDialog));
   if (funOn('quiz')) items.push(item('🎯 Wer ist das? (Quiz)', () => F.openQuiz()));
   if (funOn('terminal')) items.push(item('⌨ Terminal  ( ^ )', () => F.openTerminal()));
@@ -737,6 +739,7 @@ function toggleMenu() {
       item('💬 Kontaktwege verwalten', channelManager),
       ...(S.me.communication ? [item('🗨 Kommunikation verwalten', commAdminDialog)] : []),
       item('🧭 Zuständigkeiten verwalten', () => T.taskManager()),
+      item('✉ Signatur verwalten', signatureAdmin),
       item('📊 Datenqualität', qualityDialog),
       ...(S.site.reports !== false ? [item(`🚩 Meldungen${S.openReports ? ' (' + S.openReports + ' offen)' : ''}`, reportsDialog)] : []),
       item('🔄 AD-Abgleich', syncDialog),

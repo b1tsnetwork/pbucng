@@ -25,9 +25,10 @@ const (
 var funKeys = []string{"village", "quiz", "terminal", "seasonal", "badges"}
 
 type UserPrefs struct {
-	Favorites []string        `json:"favorites,omitempty"` // "e12" (Eintrag) oder "p3" (eigener privater Kontakt)
-	Fun       map[string]bool `json:"fun,omitempty"`
-	FeedHash  string          `json:"feedHash,omitempty"` // SHA-256 des Favoriten-Codes (Windows-Symbol)
+	Favorites []string          `json:"favorites,omitempty"` // "e12" (Eintrag) oder "p3" (eigener privater Kontakt)
+	Fun       map[string]bool   `json:"fun,omitempty"`
+	FeedHash  string            `json:"feedHash,omitempty"`  // SHA-256 des Favoriten-Codes (Windows-Symbol)
+	Signature map[string]string `json:"signature,omitempty"` // eigene Angaben für die E-Mail-Signatur (signature.go)
 }
 
 func (a *App) loadPrefs(ctx context.Context, user string) UserPrefs {

@@ -95,6 +95,26 @@ Allgemein sichtbare Einträge können nur Administratoren anlegen.
 - **Kopieren & Einfügen:** „📋 Kopieren“ legt den Avatar in die Zwischenablage des Browsers, „📥 Einfügen“ setzt ihn bei einem anderen Eintrag ein.
 - **Für Administratoren:** „Von Eintrag übernehmen …“ (Suche nach Name/Amt) holt den Avatar eines anderen Eintrags. „📤 Auf andere übertragen …“ speichert den aktuellen Avatar bei beliebig vielen ausgewählten Einträgen auf einmal.
 
+**E-Mail-Signatur** (Benutzermenü → „✉ E-Mail-Signatur“)
+- Erzeugt die Outlook-Signatur nach Styleguide: Logo, Name, Amt und Sachgebiet, Position, Tel./Fax/Mobil in Styleguide-Schreibweise (z. B. `01234 56-1104`, `0172 232 08 63`), E-Mail, Dienstgebäude mit Zimmer, Postanschrift und Links.
+- **Vorausgefüllt aus dem eigenen Eintrag:** Name, Telefon, Mobil, E-Mail und Raum kommen aus dem Telefonbuch. Amt und Sachgebiet kommen aus der Einheit im Organigramm (Ebene einstellbar). Das Dienstgebäude kommt aus der Zuordnung der Einheit.
+- **Ergänzen:** Position und Fax kommen dazu. Jede Angabe lässt sich nur für die Signatur abweichend setzen und mit „↺ aus dem Telefonbuch“ zurücknehmen. Die eigenen Angaben werden gespeichert, auch beim Kopieren.
+- **„Signatur kopieren“** legt HTML (mit eingebettetem Logo) und Klartext in die Zwischenablage; in Outlook mit Strg + V einfügen. Die Vorschau zeigt genau das, was kopiert wird.
+- **Grunddaten aus einer eigenen Datei:** Organisation, Adressen, Links, Dienstgebäude und Logo gehören nicht ins Projekt. Sie stehen in einer JSON-Datei außerhalb des Repositorys: `signature.file` in der Konfiguration oder `TB_SIGNATURE_FILE`. Vorlage: [`docs/signature.example.json`](docs/signature.example.json).
+  - Das Logo liegt als PNG daneben (`"logoFile": "logo.png"`, relativ zur Datei).
+  - Dienstgebäude je Einheit dürfen über das **Kürzel** der Einheit zugeordnet werden (`"unitSites": {"32": "markt5"}`). So gilt die Datei in jeder Installation.
+  - Die Datei wird beim Start geprüft. Tippfehler in Feldnamen, ein fehlendes Logo oder ungültige Werte verhindern den Start mit einer klaren Meldung.
+  - Ohne Datei gibt es nur neutrale Vorgaben, der Generator ist dann aus.
+- **Vorrang:** Was die Verwaltung speichert (siehe unten), gilt vor der Datei. „Auf Datei zurücksetzen“ verwirft es wieder. Ein in der Verwaltung hochgeladenes Logo gilt ebenso vor dem Logo aus der Datei.
+- **Grunddaten zentral** (Verwaltung → „✉ Signatur verwalten“):
+  - Organisation, Postanschrift, Ortsvorwahl und Anlagen-Rufnummer, E-Mail-Domain, Links;
+  - Schrift, Größe, Zeilenabstand und Farbe; Logo (PNG, höchstens 40 KB);
+  - welche Ebene des Organigramms „Amt“ bzw. „Sachgebiet“ ist;
+  - Liste der Dienstgebäude und Dienstgebäude je Einheit (gilt nach unten weiter);
+  - an/aus.
+- Das HTML entsteht im Server (`signature.go`). Die Vorschau läuft in einem eigenen Rahmen (`/signature-frame.html`) mit eigener, enger CSP: Die Signatur braucht `style`-Attribute für Outlook, die Hauptseite verbietet sie weiter.
+- Geht auch im Rückfall-Betrieb (nur lesen); dann lassen sich die eigenen Angaben nicht speichern.
+
 **AD-Abgleich** (optional)
 - Stammdaten (Name, Telefon, Mobil, Raum, Amt, E-Mail; einstellbar) werden aus dem AD übernommen. Der Abgleich läuft zeitgesteuert, per Knopf oder per `telefonbuch sync`.
 - Einträge werden über die `objectGUID` zugeordnet. Umbenennungen bleiben dadurch erhalten, Schlagworte und Avatare auch.
@@ -468,6 +488,8 @@ web/           Frontend (index.html, css/app.css, js/*.js)
 | `PUT /api/me/prefs` (Favoriten, Extras), `POST/DELETE /api/me/feed-token` | angemeldet |
 | `GET /api/favorites/feed?t=…` (Favoriten fürs Windows-Symbol) | nur mit persönlichem Code |
 | `PUT /api/admin/fun` (Extras für alle freigeben/abschalten) | Admin |
+| `GET/PUT /api/signature`, `POST /api/signature/render`, `GET /api/signature/logo.png` (E-Mail-Signatur) | angemeldet (nur eigene Angaben) |
+| `GET/PUT /api/admin/signature`, `PUT/DELETE /api/admin/signature/logo` | Admin |
 | `PUT /api/org/levels`, `POST/PUT/DELETE /api/org/units[/{id}]`, `POST /api/org/units/{id}/members` | Admin |
 | `GET/POST /api/tags`, `PUT/DELETE /api/tags/{id}`, `POST /api/tags/{id}/merge`, `POST /api/tags/cleanup` | Admin |
 | `GET/POST /api/admin/sync`, `POST /api/admin/ldap-test`, `GET /api/admin/audit` | Admin |

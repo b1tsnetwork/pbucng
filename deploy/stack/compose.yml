@@ -73,10 +73,13 @@ services:
       TB_COMMUNICATION_PUBLIC_URL: https://${COMM_DOMAIN:?COMM_DOMAIN in .env setzen}
       TB_COMMUNICATION_INTERNAL_URL: http://ucng:8080
       TB_COMMUNICATION_SECRET_FILE: /run/secrets/ucng_integration_secret
+      # E-Mail-Signatur: eigene Grunddaten und Logo (config/signatur/README.md); leer = neutrale Vorgaben
+      TB_SIGNATURE_FILE: ${TB_SIGNATURE_FILE:-}
     secrets: [db_password, ldap_bind_password, metrics_token, ucng_integration_secret]
     volumes:
       - ./config/telefonbuch.json:/etc/telefonbuch/config.json:ro
       - ./config/ca:/etc/telefonbuch/ca:ro   # Stammzertifikat der Firma (LDAPS), siehe config/ca/README.md
+      - ./config/signatur:/etc/telefonbuch/signatur:ro   # Grunddaten der E-Mail-Signatur (optional)
       - tb-data:/data                        # JSON-Kopie (Rückfall bei Datenbank-Ausfall)
     networks: [backend, edge]
     healthcheck:

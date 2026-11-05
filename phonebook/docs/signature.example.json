@@ -1,0 +1,31 @@
+{
+  "enabled": true,
+  "org": "Stadt Musterstadt",
+  "areaCode": "01234",
+  "exchange": "56",
+  "mailDomain": "musterstadt.de",
+  "postAddress": "Postfach 10 20 30 . 12340 Musterstadt",
+  "links": [
+    { "text": "www.musterstadt.de", "url": "https://www.musterstadt.de" }
+  ],
+  "font": "Arial,Helvetica,sans-serif",
+  "fontSize": "11pt",
+  "lineHeight": "14pt",
+  "color": "#1D1D1B",
+  "logoFile": "",
+  "logoWidth": 155,
+  "logoHeight": 45,
+  "logoAlt": "Stadt Musterstadt",
+  "amtLevel": 2,
+  "sgLevel": 3,
+  "sites": [
+    { "id": "rathaus", "group": "Verwaltung", "street": "Am Rathaus 1", "zip": "12345", "city": "Musterstadt" },
+    { "id": "markt5", "group": "Verwaltung", "street": "Markt 5", "zip": "12345", "city": "Musterstadt" },
+    { "id": "archiv", "group": "Verwaltung", "extra": "Stadtarchiv", "street": "Am Archiv 3", "zip": "12345", "city": "Musterstadt" },
+    { "id": "feuerwache", "group": "Feuerwehr", "street": "Feuerwehrstraße 2", "zip": "12347", "city": "Musterstadt" }
+  ],
+  "defaultSite": "rathaus",
+  "unitSites": { "32": "markt5" },
+  "stand": "",
+  "note": ""
+}

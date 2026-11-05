@@ -170,7 +170,7 @@ func (a *App) tryReconnect(ctx context.Context) bool {
 func (a *App) readOnlyGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if a.offline.Load() && r.Method != http.MethodGet && r.Method != http.MethodHead &&
-			r.URL.Path != "/api/login" && r.URL.Path != "/api/logout" {
+			r.URL.Path != "/api/login" && r.URL.Path != "/api/logout" && r.URL.Path != "/api/signature/render" {
 			jsonError(w, http.StatusServiceUnavailable, ErrReadOnly.Error())
 			return
 		}

@@ -30,6 +30,7 @@ var version = "dev"
 
 type App struct {
 	cfg      *Config
+	sigFile  *sigFile                 // Grunddaten der E-Mail-Signatur aus signature.file (nil = keine Datei)
 	storeP   atomic.Pointer[storeBox] // austauschbar (Rückfall auf JSON und zurück)
 	offline  atomic.Bool              // läuft gerade auf der JSON-Reserve (MySQL nicht erreichbar)
 	ctx      context.Context
@@ -97,6 +98,15 @@ func main() {
 		log.Fatal(err)
 	}
 	defer app.st().Close()
+	if cfg.Signature.File != "" { // Grunddaten der E-Mail-Signatur (signature.go)
+		if app.sigFile, err = loadSigFile(cfg.Signature.File); err != nil {
+			log.Fatal(err)
+		}
+		if err := app.checkSigFile(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Signatur: Grunddaten aus %s", cfg.Signature.File)
+	}
 	if cfg.Auth.DevAdmin {
 		if err := ensureDevAdmin(app); err != nil {
 			log.Fatalf("DEV-Admin: %v", err)
@@ -250,6 +260,17 @@ func (a *App) routes(dev bool) http.Handler {
 	mux.HandleFunc("DELETE /api/channels/{id}", a.requireAdmin(a.handleDeleteChannel))
 	mux.HandleFunc("POST /api/channels/{id}/members", a.requireAdmin(a.handleChannelMembers))
 	mux.HandleFunc("PUT /api/org/levels", a.requireAdmin(a.handleSetOrgLevels))
+	// E-Mail-Signatur (signature.go)
+	mux.HandleFunc("GET /api/signature", a.requireAuth(a.handleGetSignature))
+	mux.HandleFunc("PUT /api/signature", a.requireAuth(a.handleSetSignature))
+	mux.HandleFunc("POST /api/signature/render", a.requireAuth(a.handleRenderSignature))
+	mux.HandleFunc("GET /api/signature/logo.png", a.requireAuth(a.handleSignatureLogo))
+	mux.HandleFunc("GET /api/admin/signature", a.requireAdmin(a.handleGetSignatureAdmin))
+	mux.HandleFunc("PUT /api/admin/signature", a.requireAdmin(a.handleSetSignatureAdmin))
+	mux.HandleFunc("DELETE /api/admin/signature", a.requireAdmin(a.handleResetSignatureAdmin))
+	mux.HandleFunc("PUT /api/admin/signature/logo", a.requireAdmin(a.handleSetSignatureLogo))
+	mux.HandleFunc("DELETE /api/admin/signature/logo", a.requireAdmin(a.handleDeleteSignatureLogo))
+	mux.HandleFunc("GET /signature-frame.html", a.handleSignatureFrame)
 	mux.HandleFunc("POST /api/org/units", a.requireAdmin(a.handleCreateOrgUnit))
 	mux.HandleFunc("PUT /api/org/units/{id}", a.requireAdmin(a.handleUpdateOrgUnit))
 	mux.HandleFunc("DELETE /api/org/units/{id}", a.requireAdmin(a.handleDeleteOrgUnit))
