@@ -27,11 +27,12 @@ gen metrics_token 40
 gen ucng_integration_secret 64      # gemeinsames Geheimnis Telefonbuch ↔ Kommunikation (≥ 32 Zeichen)
 gen ucng_admin_password 32          # Notfallzugang /admin der Kommunikation
 gen voice_agent_token 64            # Schlüssel für abgesetzte Sprach-Server (voice-node/)
+gen org_export_token 48             # Organisations-Export für Fachverfahren (nur wirksam mit ORG_EXPORT=1)
 if [ ! -s ldap_bind_password ]; then
 	if [ -t 0 ]; then ask ldap_bind_password "Passwort des LDAP-Dienstkontos (leer = nur lokale Konten)"; else : > ldap_bind_password; echo "  leer:      ldap_bind_password (ohne LDAP)"; fi
 fi
-chown 0:65532 db_password db_root_password metrics_token ucng_integration_secret ucng_admin_password voice_agent_token ldap_bind_password 2>/dev/null || echo "Hinweis: chown nicht möglich (nicht root?) – Rechte bitte selbst setzen: root:65532, 0440"
-chmod 0440 db_password db_root_password metrics_token ucng_integration_secret ucng_admin_password voice_agent_token ldap_bind_password
+chown 0:65532 db_password db_root_password metrics_token ucng_integration_secret ucng_admin_password voice_agent_token org_export_token ldap_bind_password 2>/dev/null || echo "Hinweis: chown nicht möglich (nicht root?) – Rechte bitte selbst setzen: root:65532, 0440"
+chmod 0440 db_password db_root_password metrics_token ucng_integration_secret ucng_admin_password voice_agent_token org_export_token ldap_bind_password
 # Sicherungsordner der Datenbank (Profil backup) gehört dem MySQL-Benutzer im Container (999)
 if chown 999:999 ../backup/dumps 2>/dev/null; then
 	chmod 0750 ../backup/dumps

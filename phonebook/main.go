@@ -315,6 +315,7 @@ func (a *App) routes(dev bool) http.Handler {
 		mux.HandleFunc("DELETE /api/admin/communication", a.requireAdmin(a.handleCommAdminReset))
 		mux.HandleFunc("POST /api/admin/communication/sync", a.requireAdmin(a.handleCommAdminSync))
 	}
+	mux.HandleFunc("GET /api/export/org", a.handleOrgExport) // Organisations-Export (Token, sonst 404)
 	mux.HandleFunc("GET /livez", a.handleLivez)
 	mux.HandleFunc("GET /readyz", a.handleReadyz)
 	mux.HandleFunc("GET /metrics", a.handleMetrics)

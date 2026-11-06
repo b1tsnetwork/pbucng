@@ -113,6 +113,11 @@ type Config struct {
 		Allow []string `json:"allow"`
 	} `json:"monitoring"`
 
+	// Organisations-Export für Fachverfahren (GET /api/export/org): nur mit Token, sonst aus
+	OrgExport struct {
+		Token string `json:"token"`
+	} `json:"orgExport"`
+
 	// Client-Protokoll: Das Windows-Symbol meldet Start/Stop (Rechnername, IP, Benutzer, Zeit).
 	// Nur für die Administration sichtbar, Standard: aus.
 	ClientLog struct {
@@ -308,6 +313,7 @@ func loadConfig(path string) (*Config, error) {
 	env("TB_LDAP_BIND_PASSWORD", &c.LDAP.BindPassword)
 	env("TB_AUTH_MODE", &c.Auth.Mode)
 	env("TB_METRICS_TOKEN", &c.Monitoring.Token)
+	env("TB_ORG_EXPORT_TOKEN", &c.OrgExport.Token)
 	if v := os.Getenv("TB_COMMUNICATION_ENABLED"); v != "" {
 		c.Communication.Enabled = v == "1" || v == "true"
 	}
@@ -341,7 +347,7 @@ func loadConfig(path string) (*Config, error) {
 	for _, f := range []struct {
 		key string
 		dst *string
-	}{{"TB_METRICS_TOKEN_FILE", &c.Monitoring.Token}, {"TB_CLIENT_LOG_KEY_FILE", &c.ClientLog.Key}} {
+	}{{"TB_METRICS_TOKEN_FILE", &c.Monitoring.Token}, {"TB_CLIENT_LOG_KEY_FILE", &c.ClientLog.Key}, {"TB_ORG_EXPORT_TOKEN_FILE", &c.OrgExport.Token}} {
 		if v := os.Getenv(f.key); v != "" {
 			b, err := os.ReadFile(v)
 			if err != nil {

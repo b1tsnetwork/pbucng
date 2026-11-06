@@ -38,6 +38,12 @@
 	# Server-zu-Server-Schnittstellen nur intern (UCNG ruft http://app:8080 direkt auf)
 	@internal path /api/internal/*
 	respond @internal 404
+	# Organisations-Export (Token) nur aus den erlaubten Netzen (ORG_EXPORT_ALLOW, Standard: private Netze)
+	@export {
+		path /api/export/*
+		not remote_ip {$ORG_EXPORT_ALLOW:private_ranges}
+	}
+	respond @export 404
 	reverse_proxy app:8080 {
 		transport http {
 			read_timeout 10m   # manueller AD-Abgleich kann dauern

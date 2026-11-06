@@ -75,7 +75,9 @@ services:
       TB_COMMUNICATION_SECRET_FILE: /run/secrets/ucng_integration_secret
       # E-Mail-Signatur: eigene Grunddaten und Logo (config/signatur/README.md); leer = neutrale Vorgaben
       TB_SIGNATURE_FILE: ${TB_SIGNATURE_FILE:-}
-    secrets: [db_password, ldap_bind_password, metrics_token, ucng_integration_secret]
+      # Organisations-Export GET /api/export/org für Fachverfahren: nur mit ORG_EXPORT=1 (sonst 404)
+      TB_ORG_EXPORT_TOKEN_FILE: ${ORG_EXPORT:+/run/secrets/org_export_token}
+    secrets: [db_password, ldap_bind_password, metrics_token, ucng_integration_secret, org_export_token]
     volumes:
       - ./config/telefonbuch.json:/etc/telefonbuch/config.json:ro
       - ./config/ca:/etc/telefonbuch/ca:ro   # Stammzertifikat der Firma (LDAPS), siehe config/ca/README.md
@@ -146,7 +148,8 @@ services:
     environment:
       TB_DOMAIN: ${TB_DOMAIN}
       COMM_DOMAIN: ${COMM_DOMAIN}
-      TLS_MODE: ${TLS_MODE:-files}           # files | internal | acme
+      TLS_MODE: ${TLS_MODE:-files}
+      ORG_EXPORT_ALLOW: ${ORG_EXPORT_ALLOW:-private_ranges}           # files | internal | acme
       ACME_EMAIL: ${ACME_EMAIL:-}
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -224,3 +227,4 @@ secrets:
   ucng_integration_secret: { file: ./secrets/ucng_integration_secret }
   ucng_admin_password:    { file: ./secrets/ucng_admin_password }
   voice_agent_token:      { file: ./secrets/voice_agent_token }
+  org_export_token:       { file: ./secrets/org_export_token }

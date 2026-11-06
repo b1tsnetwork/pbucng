@@ -312,6 +312,24 @@ scrape_configs:
 
 Sinnvolle Alarme: `tb_storage_up == 0`, `tb_storage_offline == 1`, `tb_adsync_last_success == 0`, `time() - tb_adsync_last_run_timestamp_seconds > 2 * Intervall`, steigende `tb_logins_total{result="blocked"}`.
 
+### Organisations-Export für Fachverfahren (z. B. Antragswerk)
+
+`GET /api/export/org` liefert Organigramm, Personen und Räume als JSON (`"format": "telefonbuch-org/1"`), damit andere Anwendungen die Organisation **nicht doppelt pflegen** müssen. Nur lesend, nur mit Token; ohne `orgExport.token` (bzw. `TB_ORG_EXPORT_TOKEN` / `TB_ORG_EXPORT_TOKEN_FILE`) gibt es den Endpunkt nicht (404).
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" https://telefonbuch.example/api/export/org
+```
+
+| Teil | Inhalt |
+|---|---|
+| `units` | `id`, `key` (Kürzel, sonst `OE-<id>`), `parent`/`parentKey`, `name`, `short`, `label`, `level` (Ebene), `depth`, `path`, `top`, `leaders`/`deputies` (wirksam: fest eingetragen **oder** über das Leitungs-Schlagwort der Ebene), `head` (erste Leitung, sonst geerbt von der Oberheit), `email`/`phone`/`ticketUrl` (Kontaktweg, auch geerbt), `members` |
+| `people` | aktive, nicht ausgeblendete Einträge: `username`, Name, `email`, `phone`, `mobile`, `room`, `amt`, `unit`/`unitKey`/`unitName`/`unitPath`, `function` („Leitung Amt“), `manager`/`managerName`/`managerEmail` (Leitung der eigenen Einheit, für Leitungen die der Oberheit), `deputies` (Anmeldenamen) |
+| `rooms` | alle vergebenen Räume mit Anzahl Personen und der Einheit, die dort am stärksten vertreten ist |
+
+Die Antwort trägt ein `ETag` (Version über Ebenen, Einheiten und Personen); mit `If-None-Match` gibt es `304`, solange sich nichts geändert hat. Sie ist `Cache-Control: no-store` – der Abrufer merkt sich das `ETag` selbst, Zwischenspeicher bleiben außen vor. Abwesenheiten und private Kontakte sind nicht enthalten.
+
+Jeder vollständige Abruf (nicht die `304`-Antworten) steht im Protokoll der Verwaltung (Aktion `org_export`, mit Anzahl Einheiten/Personen und Version). Im Stack (`deploy/stack`) wird der Export mit `ORG_EXPORT=1` in `.env` eingeschaltet; das Token steht dann in `secrets/org_export_token`. Der Gateway lässt `/api/export/*` zusätzlich nur aus `ORG_EXPORT_ALLOW` zu (Standard: private Netze), alle anderen erhalten `404`.
+
 ### Befehle
 
 | Befehl | Zweck |
@@ -473,6 +491,7 @@ web/           Frontend (index.html, css/app.css, js/*.js)
 | `POST /api/client/event` (Client-Protokoll, nur wenn eingeschaltet; ggf. Header `X-TB-Client-Key`) | – |
 | `GET /livez`, `GET /readyz`, `GET /healthz` | – (`/readyz`-Details nur intern/Token) |
 | `GET /metrics` | interne Netze oder Token |
+| `GET /api/export/org` (Organisations-Export, nur wenn `orgExport.token` gesetzt ist) | Bearer-Token |
 | `GET /api/admin/clients`, `GET /api/admin/clients.csv` | Admin |
 | `POST /api/logout`, `GET /api/me` | angemeldet |
 | `GET /api/directory` (Einträge, Schlagworte, Kategorien; eigene und für mich freigegebene private Kontakte nur angemeldet) | Gast (wenn `publicDirectory`) / angemeldet |

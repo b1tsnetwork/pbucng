@@ -31,7 +31,7 @@ Diese Referenz-Installation enthält alle Komponenten für einen Server mit Dock
 | `config/ca/` | Stammzertifikat der Firma (LDAPS) |
 | `config/signatur/` | optional: eigene Grunddaten und Logo der E-Mail-Signatur (nicht eingecheckt) |
 | `gateway/Caddyfile`, `gateway/certs/` | Gateway und Zertifikate |
-| `secrets/create.sh` | erzeugt alle Geheimnisse |
+| `secrets/create.sh` | erzeugt alle Geheimnisse (vorhandene bleiben unverändert; nach Updates erneut ausführen, wenn neue hinzukommen) |
 | `backup/mysql-backup.sh` | tägliche Datenbank-Sicherung |
 | `check.sh` | Prüfung durch den Gateway (`telefonbuch commcheck`) |
 | `voice-node/` | abgesetzter Sprach-Server (je Server einmal) |

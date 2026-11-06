@@ -8,6 +8,8 @@
 
 ## Neu nach rc.1
 
+- **Organisations-Export** `GET /api/export/org` für Fachverfahren wie das Antragswerk: Einheiten mit wirksamer Leitung und Ebene, Personen mit Einheit, Vorgesetzter/m und Vertretungen, Räume. Nur mit Bearer-Token (`orgExport.token`, `TB_ORG_EXPORT_TOKEN[_FILE]`), sonst nicht vorhanden. Mit `ETag`/`If-None-Match`, `no-store`; jeder vollständige Abruf wird protokolliert. Keine Migration. **Stack:** einschalten mit `ORG_EXPORT=1`, Zugriff am Gateway auf `ORG_EXPORT_ALLOW` begrenzt (Standard: private Netze). **Bestehende Installationen müssen `secrets/create.sh` einmal erneut ausführen** – Compose erwartet die neue Datei `secrets/org_export_token` auch bei ausgeschaltetem Export (vorhandene Geheimnisse bleiben unverändert).
+
 - **E-Mail-Signatur** (Benutzermenü → „✉ E-Mail-Signatur“): Outlook-Signatur nach Styleguide, vorausgefüllt aus dem eigenen Eintrag und dem Organigramm (Amt, Sachgebiet, Dienstgebäude der Einheit), mit eigenen Ergänzungen. Grunddaten, Logo und Dienstgebäude pflegt die Verwaltung unter „✉ Signatur verwalten“. Keine Migration; gespeichert wird in den vorhandenen Tabellen `settings` und `user_prefs`.
 
 ## Neu seit dem letzten Stand (PH-05)
